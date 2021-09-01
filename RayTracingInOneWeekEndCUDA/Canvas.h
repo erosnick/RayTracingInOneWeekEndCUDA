@@ -11,6 +11,7 @@
 #include "stb_image.h"
 #include "stb_image_write.h"
 
+#include "Vec3.h"
 #include "Buffer.h"
 
 class Canvas {
@@ -63,6 +64,10 @@ public:
 
     inline CUDA_HOST_DEVICE void writePixel(int32_t index, Float3 color) {
         writePixel(index, color.x, color.y, color.z);
+    }
+
+    inline CUDA_HOST_DEVICE void writePixel(int32_t index, const Vec3& color) {
+        writePixel(index, color.x(), color.y(), color.z());
     }
 
     //inline Tuple pixelAt(int32_t x, int32_t y) {
