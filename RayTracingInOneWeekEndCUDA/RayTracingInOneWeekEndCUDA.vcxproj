@@ -22,6 +22,7 @@
     <ClInclude Include="cutil_math.h" />
     <ClInclude Include="GPUTimer.h" />
     <ClInclude Include="Utils.h" />
+    <ClInclude Include="Vec3.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Canvas.cpp" />
