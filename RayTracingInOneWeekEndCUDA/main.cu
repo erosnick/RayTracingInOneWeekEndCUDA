@@ -3,6 +3,7 @@
 #include "device_launch_parameters.h"
 #include "Utils.h"
 #include "Canvas.h"
+#include "GPUTimer.h"
 #include <cstdio>
 
 template<typename T>
@@ -41,8 +42,12 @@ int main() {
     dim3 gridSize((width + blockSize.x - 1) / blockSize.x,
                   (height + blockSize.y - 1) / blockSize.y);
 
+    GPUTimer timer("Rendering start...");
+
     kernel<<<gridSize, blockSize>>>(canvas);
     gpuErrorCheck(cudaDeviceSynchronize());
+
+    timer.stop("Rendering elapsed time");
 
     canvas->writeToPNG("render.png");
     Utils::openImage(L"render.png");
