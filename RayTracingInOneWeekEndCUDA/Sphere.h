@@ -3,22 +3,9 @@
 #include "CUDA.h"
 #include "Vec3.h"
 
-struct HitResult {
-    bool bHit = false;
-    Float t = -Math::infinity;
-    Float3 position;
-    Float3 normal;
-    bool bFrontFace = true;
-
-    inline CUDA_HOST_DEVICE void setFaceNormal(const Ray& ray, const Float3& outwardNormal) {
-        bFrontFace = dot(ray.direction, outwardNormal) < Math::epsilon;
-        normal = bFrontFace ? outwardNormal : -outwardNormal;
-    }
-};
-
 class Sphere {
 public:
-    inline CUDA_HOST_DEVICE bool hit(const Ray& ray, Float tMin, Float tMax, HitResult& hitResult) const {
+    inline CUDA_HOST_DEVICE bool hit(const Ray& ray, Float tMin, Float tMax) const {
         //auto oc = ray.origin - center;
         //auto a = dot(ray.direction, ray.direction);
         //auto b = 2.0f * dot(oc, ray.direction);
@@ -48,11 +35,6 @@ public:
             }
         }
 
-        hitResult.bHit = true;
-        hitResult.t = root;
-        hitResult.position = ray.at(hitResult.t);
-        auto outwardNormal = (hitResult.position - center) / radius;
-        hitResult.setFaceNormal(ray, outwardNormal);
         return true;
     }
 
