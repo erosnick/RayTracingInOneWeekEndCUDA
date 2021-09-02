@@ -16,6 +16,13 @@ T* createObject() {
 }
 
 template<typename T>
+T* createObjectArray(int32_t numObjects) {
+    T* object = nullptr;
+    gpuErrorCheck(cudaMallocManaged(&object, sizeof(T) * numObjects));
+    return object;
+}
+
+template<typename T>
 void deleteObject(T* object) {
     gpuErrorCheck(cudaFree(object));
 }
@@ -38,7 +45,7 @@ CUDA_DEVICE bool hit(const Ray& ray, Float tMin, Float tMax, HitResult& hitResul
     return bHitAnything;
 }
 
-CUDA_DEVICE Float3 rayColor(const Ray& ray) {
+CUDA_DEVICE Float3 rayColor(const Ray& ray, curandState& randState) {
     HitResult hitResult;
     if (hit(ray, Math::epsilon, Math::infinity, hitResult)) {
         return 0.5f * (hitResult.normal + 1.0f);
@@ -49,23 +56,43 @@ CUDA_DEVICE Float3 rayColor(const Ray& ray) {
     return lerp(make_float3(1.0f, 1.0f, 1.0f), make_float3(0.5f, 0.7f, 1.0f), t);
 }
 
-CUDA_GLOBAL void kernel(Canvas canvas, Camera camera) {
+CUDA_GLOBAL void renderInit(int32_t width, int32_t height, curandState* randState) {
+    auto x = threadIdx.x + blockDim.x * blockIdx.x;
+    auto y = threadIdx.y + blockDim.y * blockIdx.y;
+    auto index = y * width + x;
+
+    if (index < (width * height)) {
+        //Each thread gets same seed, a different sequence number, no offset
+        curand_init(1984, index, 0, &randState[index]);
+    }
+}
+
+CUDA_GLOBAL void render(Canvas canvas, Camera camera, curandState* randStates) {
     auto x = threadIdx.x + blockDim.x * blockIdx.x;
     auto y = threadIdx.y + blockDim.y * blockIdx.y;
     auto width = camera.getImageWidth();
     auto height = camera.getImageHeight();
+    constexpr auto samplesPerPixel = 8;
 
     auto index = y * width + x;
 
     if (index < (width * height)) {
-        auto dx = Float(x) / (width - 1);
-        auto dy = Float(y) / (height - 1);
+        auto color = make_float3(0.0f, 0.0f, 0.0f);
+        auto localRandState = randStates[index];
+        for (auto i = 0; i < samplesPerPixel; i++) {
 
-        auto ray = camera.getRay(dx, dy);
+            auto rx = curand_uniform(&localRandState);
+            auto ry = curand_uniform(&localRandState);
 
-        auto color = rayColor(ray);
+            auto dx = Float(x + rx) / (width - 1);
+            auto dy = Float(y + ry) / (height - 1);
 
-        canvas.writePixel(index, color);
+            auto ray = camera.getRay(dx, dy);
+
+            color += rayColor(ray, localRandState);
+        }
+
+        canvas.writePixel(index, color / samplesPerPixel);
     }
 }
 
@@ -74,6 +101,7 @@ int main() {
 
     constexpr auto width = 1280;
     constexpr auto height = 720;
+    constexpr auto pixelCount = width * height;
 
     Canvas canvas(width, height);
     //auto* canvas = createObject<Canvas>();
@@ -95,19 +123,26 @@ int main() {
 
     gpuErrorCheck(cudaMemcpyToSymbol(constantSpheres, spheres, sizeof(Sphere) * SPHERES));
 
+    auto* randStates = createObjectArray<curandState>(pixelCount);
+
     dim3 blockSize(32, 32);
     dim3 gridSize((width + blockSize.x - 1) / blockSize.x,
                   (height + blockSize.y - 1) / blockSize.y);
 
+    renderInit<<<gridSize, blockSize>>>(width, height, randStates);
+    gpuErrorCheck(cudaDeviceSynchronize());
+
     GPUTimer timer("Rendering start...");
 
-    kernel<<<gridSize, blockSize>>>(canvas, camera);
+    render<<<gridSize, blockSize>>>(canvas, camera, randStates);
     gpuErrorCheck(cudaDeviceSynchronize());
 
     timer.stop("Rendering elapsed time");
 
     canvas.writeToPNG("render.png");
     Utils::openImage(L"render.png");
+
+    deleteObject(randStates);
 
     //deleteObject(camera);
 

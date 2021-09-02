@@ -5,6 +5,8 @@ VisualStudioVersion = 16.0.31624.102
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "RayTracingInOneWeekEndCUDA", "RayTracingInOneWeekEndCUDA.vcxproj", "{E45A458B-56C8-45E4-B351-5E143526518F}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Test", "..\..\Test\Test.vcxproj", "{004CB183-13D3-4039-92D2-4FFA4E90CEB1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -15,6 +17,10 @@ Global
 		{E45A458B-56C8-45E4-B351-5E143526518F}.Debug|x64.Build.0 = Debug|x64
 		{E45A458B-56C8-45E4-B351-5E143526518F}.Release|x64.ActiveCfg = Release|x64
 		{E45A458B-56C8-45E4-B351-5E143526518F}.Release|x64.Build.0 = Release|x64
+		{004CB183-13D3-4039-92D2-4FFA4E90CEB1}.Debug|x64.ActiveCfg = Debug|x64
+		{004CB183-13D3-4039-92D2-4FFA4E90CEB1}.Debug|x64.Build.0 = Debug|x64
+		{004CB183-13D3-4039-92D2-4FFA4E90CEB1}.Release|x64.ActiveCfg = Release|x64
+		{004CB183-13D3-4039-92D2-4FFA4E90CEB1}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

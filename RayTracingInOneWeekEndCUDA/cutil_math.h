@@ -374,6 +374,12 @@ inline __host__ __device__ float3 operator+(float3 a, float b)
 {
     return make_float3(a.x + b, a.y + b, a.z + b);
 }
+
+inline __host__ __device__ float3 operator+(float a, float3 b)
+{
+    return b + a;
+}
+
 inline __host__ __device__ void operator+=(float3 &a, float b)
 {
     a.x += b; a.y += b; a.z += b;
@@ -430,10 +436,6 @@ inline __host__ __device__ int3 operator+(int b, int3 a)
 inline __host__ __device__ uint3 operator+(uint b, uint3 a)
 {
     return make_uint3(a.x + b, a.y + b, a.z + b);
-}
-inline __host__ __device__ float3 operator+(float b, float3 a)
-{
-    return make_float3(a.x + b, a.y + b, a.z + b);
 }
 
 inline __host__ __device__ float4 operator+(float4 a, float4 b)
