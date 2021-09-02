@@ -20,7 +20,7 @@ void deleteObject(T* object) {
     gpuErrorCheck(cudaFree(object));
 }
 
-constexpr auto SPHERES = 1;
+constexpr auto SPHERES = 2;
 CUDA_CONSTANT Sphere constantSpheres[SPHERES];
 
 CUDA_DEVICE bool hit(const Ray& ray, Float tMin, Float tMax, HitResult& hitResult) {
@@ -41,8 +41,7 @@ CUDA_DEVICE bool hit(const Ray& ray, Float tMin, Float tMax, HitResult& hitResul
 CUDA_DEVICE Float3 rayColor(const Ray& ray) {
     HitResult hitResult;
     if (hit(ray, Math::epsilon, Math::infinity, hitResult)) {
-        //return 0.5f * (hitResult.normal + 1.0f);
-        return make_float3(1.0, 0.0, 0.0);
+        return 0.5f * (hitResult.normal + 1.0f);
     }
 
     auto unitDirection = normalize(ray.direction);
@@ -90,9 +89,9 @@ int main() {
     spheres[0].color = make_float3(1.0f, 0.0f, 0.0f);
     spheres[0].radius = 0.5f;
 
-    //spheres[1].center = { 0.0f, -100.5f, -1.0f };
-    //spheres[1].color = make_float3(1.0f, 0.0f, 0.0f);
-    //spheres[1].radius = 100.0f;
+    spheres[1].center = { 0.0f, -100.5f, -1.0f };
+    spheres[1].color = make_float3(1.0f, 0.0f, 0.0f);
+    spheres[1].radius = 100.0f;
 
     gpuErrorCheck(cudaMemcpyToSymbol(constantSpheres, spheres, sizeof(Sphere) * SPHERES));
 
