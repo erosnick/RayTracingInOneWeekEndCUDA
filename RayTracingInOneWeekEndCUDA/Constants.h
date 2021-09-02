@@ -20,7 +20,7 @@ namespace Math {
     constexpr Float sin30d = 0.5f;
     constexpr Float sin45d = 0.707107f;
     constexpr Float sin60D = 0.866025f;
-    constexpr Float epsilon = 0.00000f;
+    constexpr Float epsilon = 0.000001f;
     constexpr Vec3 xAxis = Vec3(1.0f, 0.0f,  0.0f);
     constexpr Vec3 yAxis = Vec3(0.0f, 1.0f,  0.0f);
     constexpr Vec3 zAxis = Vec3(0.0f, 0.0f, -1.0f);

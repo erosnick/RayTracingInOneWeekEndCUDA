@@ -93,6 +93,14 @@ inline CUDA_HOST_DEVICE Vec3 operator+(const Vec3& u, const Vec3& v) {
     return Vec3(u.x() + v.x(), u.y() + v.y(), u.z() + v.z());
 }
 
+inline CUDA_HOST_DEVICE Vec3 operator+(const Vec3& u, Float v) {
+    return Vec3(u.x() + v, u.y() + v, u.z() + v);
+}
+
+inline CUDA_HOST_DEVICE Vec3 operator+(Float v, const Vec3& u) {
+    return u + v;
+}
+
 inline CUDA_HOST_DEVICE Vec3 operator-(const Vec3& u, const Vec3& v) {
     return Vec3(u.x() - v.x(), u.y() - v.y(), u.z() - v.z());
 }

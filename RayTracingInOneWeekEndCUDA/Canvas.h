@@ -21,7 +21,7 @@ public:
     }
 
     ~Canvas() {
-        uninitialize();
+        //uninitialize();
     }
 
     void initialize(int32_t inWidth, int32_t inHeight) {
@@ -52,8 +52,8 @@ public:
     }
 
     inline CUDA_HOST_DEVICE void writePixel(int32_t index, Float red, Float green, Float blue) {
-        Float start = 0.0;
-        Float end = 0.999;
+        Float start = 0.0f;
+        Float end = 0.999f;
         //(*pixelBuffer)[index * 3] = 256 * std::clamp(sqrt(red), start, end);
         //(*pixelBuffer)[index * 3 + 1] = 256 * std::clamp(sqrt(green), start, end);
         //(*pixelBuffer)[index * 3 + 2] = 256 * std::clamp(sqrt(blue), start, end);

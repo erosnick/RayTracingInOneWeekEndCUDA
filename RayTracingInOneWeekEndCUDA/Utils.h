@@ -14,7 +14,7 @@
 #define gpuErrorCheck(ans) { Utils::gpuAssert((ans), __FILE__, __LINE__); }
 
 namespace Utils {
-    inline float randomFloat(double start = 0.0f, double end = 1.0f) {
+    inline float randomFloat(float start = 0.0f, float end = 1.0f) {
         std::uniform_real_distribution<float> distribution(start, end);
         static std::random_device randomDevice;
         static std::mt19937 generator(randomDevice());
