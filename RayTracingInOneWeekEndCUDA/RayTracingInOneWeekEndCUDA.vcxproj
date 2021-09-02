@@ -80,6 +80,7 @@
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <CodeGeneration>compute_61,sm_61</CodeGeneration>
       <AdditionalOptions>--std=c++17 --expt-relaxed-constexpr %(AdditionalOptions)</AdditionalOptions>
+      <MaxRegCount>64</MaxRegCount>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -102,6 +103,7 @@
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <CodeGeneration>compute_61,sm_61</CodeGeneration>
       <AdditionalOptions>--std=c++17 --expt-relaxed-constexpr %(AdditionalOptions)</AdditionalOptions>
+      <MaxRegCount>64</MaxRegCount>
     </CudaCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

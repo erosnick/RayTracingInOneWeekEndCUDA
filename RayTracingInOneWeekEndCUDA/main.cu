@@ -45,15 +45,32 @@ CUDA_DEVICE bool hit(const Ray& ray, Float tMin, Float tMax, HitResult& hitResul
     return bHitAnything;
 }
 
-CUDA_DEVICE Float3 rayColor(const Ray& ray, curandState& randState) {
-    HitResult hitResult;
-    if (hit(ray, Math::epsilon, Math::infinity, hitResult)) {
-        return 0.5f * (hitResult.normal + 1.0f);
+CUDA_DEVICE Float3 rayColor(const Ray& ray, curandState* randState) {
+    Ray currentRay = ray;
+    auto currentAttenuation = make_float3(1.0f, 1.0f, 1.0f);
+    for (auto i = 0; i < 50; i++) {
+        HitResult hitResult;
+        // Smaller tMin will has a impact on performance
+        Float tMin = 0.001f;
+        if (hit(currentRay, tMin, Math::infinity, hitResult)) {
+            auto& position = hitResult.position;
+            auto target = position + hitResult.normal + Utils::randomHemiSphere(hitResult.normal, randState);
+            // If hit, we need to take color contribution into account
+            //currentAttenuation *= 0.5f * hitResult.color;
+            currentAttenuation *= 0.5f;
+            auto direction = normalize(target - position);
+            currentRay = Ray(position, direction);
+        }
+        else {
+            auto unitDirection = normalize(currentRay.direction);
+            auto t = 0.5f * (unitDirection.y + 1.0f);
+            auto background = lerp(make_float3(1.0f, 1.0f, 1.0f), make_float3(0.5f, 0.7f, 1.0f), t);
+            return currentAttenuation * background;
+        }
     }
 
-    auto unitDirection = normalize(ray.direction);
-    auto t = 0.5f * (unitDirection.y + 1.0f);
-    return lerp(make_float3(1.0f, 1.0f, 1.0f), make_float3(0.5f, 0.7f, 1.0f), t);
+    // exceeded recursion
+    return make_float3(0.0f, 0.0f, 0.0f);
 }
 
 CUDA_GLOBAL void renderInit(int32_t width, int32_t height, curandState* randState) {
@@ -72,7 +89,7 @@ CUDA_GLOBAL void render(Canvas canvas, Camera camera, curandState* randStates) {
     auto y = threadIdx.y + blockDim.y * blockIdx.y;
     auto width = camera.getImageWidth();
     auto height = camera.getImageHeight();
-    constexpr auto samplesPerPixel = 8;
+    constexpr auto samplesPerPixel = 100;
 
     auto index = y * width + x;
 
@@ -88,19 +105,52 @@ CUDA_GLOBAL void render(Canvas canvas, Camera camera, curandState* randStates) {
             auto dy = Float(y + ry) / (height - 1);
 
             auto ray = camera.getRay(dx, dy);
-
-            color += rayColor(ray, localRandState);
+            color += rayColor(ray, &localRandState);
         }
-
+        // Very important!!!
+        randStates[index] = localRandState;
         canvas.writePixel(index, color / samplesPerPixel);
     }
 }
 
-int main() {
-    //gpuErrorCheck(cudaDeviceSetLimit(cudaLimitStackSize, 8192));
+std::string toPPM(int32_t width, int32_t height) {
+    auto ppm = std::string();
+    ppm.append("P3\n");
+    ppm.append(std::to_string(width) + " " + std::to_string(height) + "\n");
+    ppm.append(std::to_string(255) + "\n");
+    return ppm;
+}
 
-    constexpr auto width = 1280;
-    constexpr auto height = 720;
+void writeToPPM(const std::string& path, uint8_t* pixelBuffer, int32_t width, int32_t height) {
+    auto ppm = std::ofstream(path);
+
+    if (!ppm.is_open()) {
+        std::cout << "Open file image.ppm failed.\n";
+    }
+
+    std::stringstream ss;
+    ss << toPPM(width, height);
+
+    for (auto y = height - 1; y >= 0; y--) {
+        for (auto x = 0; x < width; x++) {
+            auto index = y * width + x;
+            auto r = uint32_t(pixelBuffer[index * 3]);
+            auto g = uint32_t(pixelBuffer[index * 3 + 1]);
+            auto b = uint32_t(pixelBuffer[index * 3 + 2]);
+            ss << r << ' ' << g << ' ' << b << '\n';
+        }
+    }
+
+    ppm.write(ss.str().c_str(), ss.str().size());
+
+    ppm.close();
+}
+
+int main() {
+    gpuErrorCheck(cudaDeviceSetLimit(cudaLimitStackSize, 8192));
+
+    constexpr auto width = 1200;
+    constexpr auto height = 600;
     constexpr auto pixelCount = width * height;
 
     Canvas canvas(width, height);
@@ -118,13 +168,13 @@ int main() {
     spheres[0].radius = 0.5f;
 
     spheres[1].center = { 0.0f, -100.5f, -1.0f };
-    spheres[1].color = make_float3(1.0f, 0.0f, 0.0f);
+    spheres[1].color = make_float3(0.5f, 0.5f, 0.5f);
     spheres[1].radius = 100.0f;
 
     gpuErrorCheck(cudaMemcpyToSymbol(constantSpheres, spheres, sizeof(Sphere) * SPHERES));
 
     auto* randStates = createObjectArray<curandState>(pixelCount);
-
+    
     dim3 blockSize(32, 32);
     dim3 gridSize((width + blockSize.x - 1) / blockSize.x,
                   (height + blockSize.y - 1) / blockSize.y);
@@ -139,6 +189,7 @@ int main() {
 
     timer.stop("Rendering elapsed time");
 
+    //writeToPPM("render.ppm", canvas.getPixelBuffer(), width, height);
     canvas.writeToPNG("render.png");
     Utils::openImage(L"render.png");
 

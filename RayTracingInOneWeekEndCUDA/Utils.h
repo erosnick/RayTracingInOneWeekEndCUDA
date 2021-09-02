@@ -28,45 +28,26 @@ namespace Utils {
         return distribution(generator);
     }
 
-    //// random number generator from https://github.com/gz/rust-raytracer
-
-    //inline CUDA_DEVICE float getrandom(uint32_t* seed0, uint32_t* seed1) {
-    //    *seed0 = 36969 * ((*seed0) & 65535) + ((*seed0) >> 16);  // hash the seeds using bitwise AND and bitshifts
-    //    *seed1 = 18000 * ((*seed1) & 65535) + ((*seed1) >> 16);
-
-    //    uint32_t ires = ((*seed0) << 16) + (*seed1);
-
-    //    // Convert to Float
-    //    union {
-    //        float f;
-    //        uint32_t ui;
-    //    } res;
-
-    //    res.ui = (ires & 0x007fffff) | 0x40000000;  // bitwise AND, bitwise OR
-
-    //    return (res.f - 2.0f) / 2.0f;
-    //}
-
     // Random double in [0, 1]
-    inline CUDA_DEVICE Float random(curandState& randState) {
-        return curand_uniform(&randState);
+    inline CUDA_DEVICE Float random(curandState* randState) {
+        return curand_uniform(randState);
     }
 
     // Random float3 in [0, 1]
-    inline CUDA_DEVICE Float3 randomVector(curandState& randState) {
-        Float x = curand_uniform(&randState);
-        Float y = curand_uniform(&randState);
-        Float z = curand_uniform(&randState);
+    inline CUDA_DEVICE Float3 randomVector(curandState* randState) {
+        Float x = curand_uniform(randState);
+        Float y = curand_uniform(randState);
+        Float z = curand_uniform(randState);
 
         return make_float3(x, y, z);
     }
 
     // Random float3 in [min, max]
-    inline CUDA_DEVICE Float3 randomVector(curandState& randState, Float min, Float max) {
+    inline CUDA_DEVICE Float3 randomVector(curandState* randState, Float min, Float max) {
         return (min + (max - min) * randomVector(randState));
     }
 
-    inline CUDA_DEVICE Float3 randomInUnitSphere(curandState& randState) {
+    inline CUDA_DEVICE Float3 randomInUnitSphere(curandState* randState) {
         while (true) {
             auto position = randomVector(randState, -1.0f, 1.0f);
             if (lengthSquared(position) >= 1.0f) {
@@ -77,31 +58,19 @@ namespace Utils {
         }
     }
 
-    //// Random float3 in [0, 1]
-    //inline CUDA_DEVICE Float3 randomVector(uint32_t* seed0, uint32_t* seed1) {
-    //    Float x = getrandom(seed0, seed1);
-    //    Float y = getrandom(seed0, seed1);
-    //    Float z = getrandom(seed0, seed1);
-    //    return make_float3(x, y, z);
-    //}
+    inline CUDA_DEVICE Float3 randomUnitVector(curandState* randState) {
+        return normalize(randomInUnitSphere(randState));
+    }
 
-    //// Random float3 in [min, max]
-    //inline CUDA_DEVICE Float3 randomVector(uint32_t* seed0, uint32_t* seed1, Float min, Float max) {
-    //    return min + (max - min) * randomVector(seed0, seed1);
-    //}
+    inline CUDA_DEVICE Float3 randomHemiSphere(const Float3& normal, curandState* randState) {
+        auto inUnitSphere = randomInUnitSphere(randState);
 
-    //inline CUDA_DEVICE Float3 randomInUnitSphere(uint32_t* seed0, uint32_t* seed1) {
-    //    while (true) {
-    //        auto position = randomVector(seed0, seed1);
-    //        //position = 2.0f * position - 1.0f;
-    //        if (lengthSquared(position) >= 1.0f) {
-    //            //printf("shit!!!\n");
-    //            continue;
-    //        }
-    //        
-    //        return position;
-    //    }
-    //}
+        //  In the same hemisphere as the normal
+        if (dot(inUnitSphere, normal) > 0.0f) {
+            return inUnitSphere;
+        }
+        return -inUnitSphere;
+    }
 
     void openImage(const std::wstring& path);
 

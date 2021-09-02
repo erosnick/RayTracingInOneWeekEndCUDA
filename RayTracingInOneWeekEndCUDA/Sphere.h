@@ -8,6 +8,7 @@ struct HitResult {
     Float t = -Math::infinity;
     Float3 position;
     Float3 normal;
+    Float3 color;
     bool bFrontFace = true;
 
     inline CUDA_HOST_DEVICE void setFaceNormal(const Ray& ray, const Float3& outwardNormal) {
@@ -26,9 +27,9 @@ public:
 
         //auto discriminant = b * b - 4 * a * c;
         auto oc = ray.origin - center;
-        auto a = lengthSquared(ray.direction);
+        auto a = dot(ray.direction, ray.direction);
         auto halfB = dot(oc, ray.direction);
-        auto c = lengthSquared(oc) - radius * radius;
+        auto c = dot(oc, oc) - radius * radius;
         auto discriminant = halfB * halfB - a * c;
 
         auto bHit = (discriminant > Math::epsilon);
@@ -53,6 +54,7 @@ public:
         hitResult.position = ray.at(hitResult.t);
         auto outwardNormal = (hitResult.position - center) / radius;
         hitResult.setFaceNormal(ray, outwardNormal);
+        hitResult.color = color;
         return true;
     }
 
