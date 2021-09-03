@@ -82,6 +82,13 @@ namespace Utils {
         return v - 2.0f * dot(v, n) * n;
     }
 
+    CUDA_DEVICE inline Float3 refract(const Float3& uv, const Float3& n, Float etaiOverEtat) {
+        auto cosTheta = fmin(dot(-uv, n), 1.0f);
+        auto rOutPerp = etaiOverEtat * (uv + cosTheta * n);
+        auto rOutParallel = -sqrt(fabs(1.0f - lengthSquared(rOutPerp))) * n;
+        return rOutPerp + rOutParallel;
+    }
+
     void openImage(const std::wstring& path);
 
     inline void gpuAssert(cudaError_t code, const char* file, int line, bool abort = true) {
