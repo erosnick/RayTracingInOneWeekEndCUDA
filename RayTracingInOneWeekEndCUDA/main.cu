@@ -60,23 +60,21 @@ CUDA_DEVICE Float3 rayColor(const Ray& ray, curandState* randState, Sphere* sphe
     for (auto i = 0; i < 5; i++) {
         HitResult hitResult;
         // Smaller tMin will has a impact on performance
-        //if (hit(currentRay, Math::epsilon, Math::infinity, hitResult, spheres)) {
-            //Float3 attenuation;
-            //if (hitResult.material->scatter(currentRay, hitResult, attenuation, currentRay, randState)) {
-            //    currentAttenuation *= attenuation;
-            //}
-        //    //auto direction = hitResult.normal + Utils::randomUnitVector(randState);
-        //    //currentRay = Ray(hitResult.position, normalize(direction));
-        //    //currentAttenuation *= 0.5f;
-        //}
-        //else {
+        if (hit(currentRay, Math::epsilon, Math::infinity, hitResult, spheres)) {
+            Float3 attenuation;
+            if (hitResult.material->scatter(currentRay, hitResult, attenuation, currentRay, randState)) {
+                currentAttenuation *= attenuation;
+            }
+            //auto direction = hitResult.normal + Utils::randomUnitVector(randState);
+            //currentRay = Ray(hitResult.position, normalize(direction));
+            //currentAttenuation *= 0.5f;
+        }
+        else {
             auto unitDirection = normalize(currentRay.direction);
             auto t = 0.5f * (unitDirection.y + 1.0f);
-            //auto background = lerp(make_float3(1.0f, 1.0f, 1.0f), make_float3(0.5f, 0.7f, 1.0f), t);
-            auto background = (1.0f - t) * make_float3(1.0f, 1.0f, 1.0f) + t * make_float3(0.5f, 0.7f, 1.0f);
-            //return currentAttenuation * background;
-            return unitDirection;
-        //}
+            auto background = lerp(make_float3(1.0f, 1.0f, 1.0f), make_float3(0.5f, 0.7f, 1.0f), t);
+            return currentAttenuation * background;
+        }
     }
 
     // exceeded recursion

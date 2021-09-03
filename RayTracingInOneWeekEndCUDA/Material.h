@@ -21,6 +21,7 @@ public:
         auto scatterDirection = hitResult.normal + Utils::randomUnitVector(randState);                      // Diffuse2
         //auto scatterDirection = Utils::randomHemiSphere(hitResult.normal, randState);                       // Diffuse3
         //auto scatterDirection = hitResult.normal + Utils::randomHemiSphere(hitResult.normal, randState);    // Diffuse4
+        //auto scatterDirection = hitResult.normal + Utils::randomInUnitSphere(randState);                    // Diffuse5
         // Catch degenerate scatter direction
         // If the random unit vector we generate is exactly opposite the normal vector, 
         // the two will sum to zero, which will result in a zero scatter direction vector. 
