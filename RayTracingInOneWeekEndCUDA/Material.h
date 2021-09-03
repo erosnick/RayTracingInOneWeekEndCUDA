@@ -53,3 +53,43 @@ public:
     Float3 albedo;
     Float fuzz;
 };
+
+class Dieletric : public Material {
+public:
+    CUDA_DEVICE Dieletric(Float inIndexOfRefraction)
+    : indexOfRefraction(inIndexOfRefraction) {
+    }
+
+    CUDA_DEVICE bool scatter(const Ray& inRay, const HitResult& hitResult, Float3& attenuation, Ray& scattered, curandState* randState) const override {
+        attenuation = make_float3(1.0f, 1.0f, 1.0f);
+        auto refractionRatio = hitResult.bFrontFace ? (1.0f / indexOfRefraction) : indexOfRefraction;
+
+        auto unitDirection = normalize(inRay.direction);
+        auto cosTheta = fmin(dot(-unitDirection, hitResult.normal), 1.0f);
+        auto sinTheta = sqrt(1.0f - cosTheta * cosTheta);
+
+        bool bCannotRefract = refractionRatio * sinTheta > 1.0f;
+        Float3 direction;
+
+        if (bCannotRefract || reflectance(cosTheta, refractionRatio) > Utils::random(randState)) {
+            direction = Utils::reflect(unitDirection, hitResult.normal);
+        }
+        else {
+            direction = Utils::refract(unitDirection, hitResult.normal, refractionRatio);
+        }
+
+        scattered = Ray(hitResult.position, normalize(direction));
+
+        return true;
+    }
+
+    Float indexOfRefraction;
+
+private:
+    CUDA_DEVICE static Float reflectance(Float cosine, Float refractionIndex) {
+        // Use Schlick's approximation for reflectance.
+        auto r0 = (1.0f - refractionIndex) / (1.0f + refractionIndex);
+        r0 = r0 * r0;
+        return r0 + (1.0f - r0) * pow((1.0f - cosine), 5.0f);
+    }
+};

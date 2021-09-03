@@ -11,6 +11,7 @@ public:
         center = inCenter;
         radius = inRadius;
         material = inMaterial;
+        bShading = true;
     }
 
     void uninitailize() {
@@ -20,30 +21,25 @@ public:
     }
 
     CUDA_DEVICE inline CUDA_DEVICE bool hit(const Ray& ray, Float tMin, Float tMax, HitResult& hitResult) const {
-        //auto oc = ray.origin - center;
-        //auto a = dot(ray.direction, ray.direction);
-        //auto b = 2.0f * dot(oc, ray.direction);
-        //auto c = dot(oc, oc) - radius * radius;
-
-        //auto discriminant = b * b - 4 * a * c;
         auto oc = ray.origin - center;
         auto a = dot(ray.direction, ray.direction);
         auto halfB = dot(oc, ray.direction);
         auto c = dot(oc, oc) - radius * radius;
         auto discriminant = halfB * halfB - a * c;
-
-        auto bHit = (discriminant > Math::epsilon);
+        // Cant's use Math::epsilon(0.001f) for comparison here
+        // Because it's not small enough(Not precise enough)
+        auto bHit = (discriminant > 0.0f);
 
         if (!bHit) {
             return false;
         }
 
-        auto d = sqrt(discriminant);
+        auto sqrtd = sqrt(discriminant);
+        Float root = (-halfB - sqrtd) / a;
 
-        Float root = (-halfB - d) / a;
-
+        // Find the nearest root that lies in the acceptable range.
         if (root < tMin || tMax < root) {
-            root = (-halfB + d) / a;
+            root = (-halfB + sqrtd) / a;
             if (root < tMin || tMax < root) {
                 return false;
             }
@@ -61,4 +57,5 @@ public:
     Float3 center;
     Float radius;
     Material* material;
+    bool bShading;
 };

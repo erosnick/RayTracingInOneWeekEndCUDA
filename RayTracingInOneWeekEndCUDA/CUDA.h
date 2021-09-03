@@ -25,4 +25,5 @@ using Float4 = float4;
 #define tan tanf
 #define floor floorf
 #define rsqrt rsqrtf
+#define pow powf
 #endif
