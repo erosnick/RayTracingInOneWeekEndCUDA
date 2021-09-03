@@ -124,9 +124,9 @@ CUDA_GLOBAL void renderInit(int32_t width, int32_t height, curandState* randStat
 CUDA_GLOBAL void render(Canvas canvas, Camera camera, curandState* randStates, Sphere* spheres) {
     auto x = threadIdx.x + blockDim.x * blockIdx.x;
     auto y = threadIdx.y + blockDim.y * blockIdx.y;
-    auto width = camera.getImageWidth();
-    auto height = camera.getImageHeight();
-    constexpr auto samplesPerPixel = 100;
+    auto width = canvas.getWidth();
+    auto height = canvas.getHeight();
+    constexpr auto samplesPerPixel = 1;
     constexpr auto maxDepth = 5;
     auto index = y * width + x;
 
@@ -135,8 +135,8 @@ CUDA_GLOBAL void render(Canvas canvas, Camera camera, curandState* randStates, S
         auto localRandState = randStates[index];
         for (auto i = 0; i < samplesPerPixel; i++) {
 
-            auto rx = 0.0f; // curand_uniform(&localRandState);
-            auto ry = 0.0f; // curand_uniform(&localRandState);
+            auto rx = curand_uniform(&localRandState);
+            auto ry = curand_uniform(&localRandState);
 
             auto dx = Float(x + rx) / (width - 1);
             auto dy = Float(y + ry) / (height - 1);
@@ -160,39 +160,6 @@ CUDA_GLOBAL void createMetalMaterial(Material** material, Float3 albedo, Float f
 
 CUDA_GLOBAL void createDieletricMaterial(Material** material, Float indexOfRefraction = 1.5f) {
     (*material) = new Dieletric(indexOfRefraction);
-}
-
-std::string toPPM(int32_t width, int32_t height) {
-    auto ppm = std::string();
-    ppm.append("P3\n");
-    ppm.append(std::to_string(width) + " " + std::to_string(height) + "\n");
-    ppm.append(std::to_string(255) + "\n");
-    return ppm;
-}
-
-void writeToPPM(const std::string& path, uint8_t* pixelBuffer, int32_t width, int32_t height) {
-    auto ppm = std::ofstream(path);
-
-    if (!ppm.is_open()) {
-        std::cout << "Open file image.ppm failed.\n";
-    }
-
-    std::stringstream ss;
-    ss << toPPM(width, height);
-
-    for (auto y = height - 1; y >= 0; y--) {
-        for (auto x = 0; x < width; x++) {
-            auto index = y * width + x;
-            auto r = uint32_t(pixelBuffer[index * 3]);
-            auto g = uint32_t(pixelBuffer[index * 3 + 1]);
-            auto b = uint32_t(pixelBuffer[index * 3 + 2]);
-            ss << r << ' ' << g << ' ' << b << '\n';
-        }
-    }
-
-    ppm.write(ss.str().c_str(), ss.str().size());
-
-    ppm.close();
 }
 
 template<typename T>
@@ -221,7 +188,7 @@ int main() {
     //auto* canvas = createObject<Canvas>();
     //canvas->initialize(width, height);
 
-    Camera camera(width, height);
+    Camera camera(make_float3(-2.0f, 2.0f, 1.0f), make_float3(0.0f, 0.0f, -1.0f), make_float3(0.0f, 1.0f, 0.0f), Float(width) / height, 20.0f);
     //auto* camera = createObject<Camera>();
     //camera->initialize(width, height);
 
@@ -286,7 +253,6 @@ int main() {
 
     canvas.writeToPNG("render.png");
     Utils::openImage(L"render.png");
-    writeToPPM("render.ppm", canvas.getPixelBuffer(), width, height);
     deleteObject(randStates);
 
     for (auto i = 0; i < SPHERES; i++) {
