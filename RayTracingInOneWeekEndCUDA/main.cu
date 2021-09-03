@@ -107,8 +107,8 @@ CUDA_GLOBAL void render(Canvas canvas, Camera camera, curandState* randStates, S
         auto localRandState = randStates[index];
         for (auto i = 0; i < samplesPerPixel; i++) {
 
-            auto rx = 0.0f; // curand_uniform(&localRandState);
-            auto ry = 0.0f; // curand_uniform(&localRandState);
+            auto rx = curand_uniform(&localRandState);
+            auto ry = curand_uniform(&localRandState);
 
             auto dx = Float(x + rx) / (width - 1);
             auto dy = Float(y + ry) / (height - 1);
