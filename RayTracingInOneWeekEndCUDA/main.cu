@@ -124,9 +124,9 @@ CUDA_GLOBAL void renderInit(int32_t width, int32_t height, curandState* randStat
 CUDA_GLOBAL void render(Canvas canvas, Camera camera, curandState* randStates, Sphere* spheres) {
     auto x = threadIdx.x + blockDim.x * blockIdx.x;
     auto y = threadIdx.y + blockDim.y * blockIdx.y;
-    auto width = camera.getImageWidth();
-    auto height = camera.getImageHeight();
-    constexpr auto samplesPerPixel = 100;
+    auto width = canvas.getWidth();
+    auto height = canvas.getHeight();
+    constexpr auto samplesPerPixel = 1;
     constexpr auto maxDepth = 5;
     auto index = y * width + x;
 
@@ -188,7 +188,7 @@ int main() {
     //auto* canvas = createObject<Canvas>();
     //canvas->initialize(width, height);
 
-    Camera camera(width, height);
+    Camera camera(make_float3(-2.0f, 2.0f, 1.0f), make_float3(0.0f, 0.0f, -1.0f), make_float3(0.0f, 1.0f, 0.0f), Float(width) / height, 20.0f);
     //auto* camera = createObject<Camera>();
     //camera->initialize(width, height);
 

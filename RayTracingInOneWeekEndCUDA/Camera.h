@@ -7,56 +7,52 @@
 
 class Camera {
 public:
-    CUDA_HOST_DEVICE Camera(int32_t inImageWidth, int32_t inImageHeight, Float inFOV = 90.0f) {
-        initialize(inImageWidth, inImageHeight, inFOV);
+    CUDA_HOST_DEVICE Camera(const Float3& inEye, const Float3& inCenter, const Float3& inUp, Float inAspectRatio, Float inFOV = 90.0f) {
+        initialize(inEye, inCenter, inUp, inAspectRatio, inFOV);
     }
 
-    CUDA_HOST_DEVICE void initialize(int32_t inImageWidth, int32_t inImageHeight, Float inFOV = 90.0f) {
-        imageWidth = inImageWidth;
-        imageHeight = inImageHeight;
+    CUDA_HOST_DEVICE void initialize(const Float3& inEye, const Float3& inCenter, const Float3& inUp, Float inAspectRatio, Float inFOV = 90.0f) {
+        eye = inEye;
+        center = inCenter;
+        up = inUp;
+        aspectRatio = inAspectRatio;
         fov = inFOV;
 
-        imageAspectRatio = Float(imageWidth) / imageHeight;
         focalLength = 1.0f;
 
         scale = tan(Math::radians(fov / 2.0f));
 
-        viewportHeight = 2.0f;
-        viewportWidth = viewportHeight * imageAspectRatio;
+        viewportHeight = 2.0f * scale;
+        viewportWidth = viewportHeight * aspectRatio;
 
-        horizontal = make_float3(viewportWidth, 0.0f, 0.0f) * scale;
-        vertical = make_float3(0.0f, viewportHeight, 0.0f) * scale;
-        origin = make_float3(0.0f, 0.0f, 0.0f);
-        lowerLeftCorner = origin - horizontal / 2.0f - vertical / 2.0f - make_float3(0.0f, 0.0f, focalLength);
+        auto w = normalize(eye - center);
+        auto u = normalize(cross(up, w));
+        auto v = cross(w, u);
+
+        origin = eye;
+        horizontal = viewportWidth * u;
+        vertical = viewportHeight * v;
+        lowerLeftCorner = origin - horizontal / 2.0f - vertical / 2.0f - w;
     }
 
     ~Camera() {
         printf("I'm dead.\n");
     }
 
-    CUDA_DEVICE inline int32_t getImageWidth() const {
-        return imageWidth;
-    }
-
-    CUDA_DEVICE inline int32_t getImageHeight() const {
-        return imageHeight;
-    }
-
     CUDA_DEVICE inline Ray getRay(Float dx, Float dy) {
-        auto direction = lowerLeftCorner + dx * horizontal + dy * vertical;
+        auto direction = lowerLeftCorner + dx * horizontal + dy * vertical - origin;
         return Ray(origin, normalize(direction));
     }
 private:
-    int32_t imageWidth;
-    int32_t imageHeight;
-
-    Float imageAspectRatio;
+    Float aspectRatio;
     Float focalLength = 1.0f;
     Float fov;
     Float scale = 1.0f;
     Float viewportHeight;
     Float viewportWidth;
-
+    Float3 eye;
+    Float3 center;
+    Float3 up;
     Float3 horizontal;
     Float3 vertical;
     Float3 origin;

@@ -71,6 +71,19 @@ public:
         bool bCannotRefract = refractionRatio * sinTheta > 1.0f;
         Float3 direction;
 
+        // Consider Total Internal Reflection
+        // One troublesome practical issue is that when the ray is in 
+        // the material with the higher refractive index, there is no 
+        // real solution to Snell's law, and thus there is no refraction
+        // possible.If we refer back to Snell's law and the derivation of sin¦È':
+        // sin¦È' = (¦Ç / ¦Ç')¡¤sin¦È
+        // If the ray is inside glass and outside is air (¦Ç = 1.5 and ¦Ç¡ä = 1.0):
+        // sin¦È' = (1.5 / 1.0)¡¤sin¦È
+        // The value of sin¦È¡ä cannot be greater than 1. So, if,
+        // (1.5 / 1.0)¡¤sin¦È > 1.0
+        // the equality between the two sides of the equation is broken, and a 
+        // solution cannot exist.If a solution does not exist, the glass cannot 
+        // refract, and therefore must reflect the ray:
         if (bCannotRefract || reflectance(cosTheta, refractionRatio) > Utils::random(randState)) {
             direction = Utils::reflect(unitDirection, hitResult.normal);
         }
