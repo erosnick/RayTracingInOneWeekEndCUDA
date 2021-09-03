@@ -2,24 +2,24 @@
 
 #include "CUDA.h"
 #include "Vec3.h"
-
-struct HitResult {
-    bool bHit = false;
-    Float t = -Math::infinity;
-    Float3 position;
-    Float3 normal;
-    Float3 color;
-    bool bFrontFace = true;
-
-    inline CUDA_HOST_DEVICE void setFaceNormal(const Ray& ray, const Float3& outwardNormal) {
-        bFrontFace = dot(ray.direction, outwardNormal) < Math::epsilon;
-        normal = bFrontFace ? outwardNormal : -outwardNormal;
-    }
-};
+#include "HitResult.h"
+#include "Material.h"
 
 class Sphere {
 public:
-    inline CUDA_HOST_DEVICE bool hit(const Ray& ray, Float tMin, Float tMax, HitResult& hitResult) const {
+    void initialize(const Float3& inCenter, float inRadius, Material* inMaterial) {
+        center = inCenter;
+        radius = inRadius;
+        material = inMaterial;
+    }
+
+    void uninitailize() {
+        //if (material) {
+        //    delete material;
+        //}
+    }
+
+    CUDA_DEVICE inline CUDA_DEVICE bool hit(const Ray& ray, Float tMin, Float tMax, HitResult& hitResult) const {
         //auto oc = ray.origin - center;
         //auto a = dot(ray.direction, ray.direction);
         //auto b = 2.0f * dot(oc, ray.direction);
@@ -54,11 +54,11 @@ public:
         hitResult.position = ray.at(hitResult.t);
         auto outwardNormal = (hitResult.position - center) / radius;
         hitResult.setFaceNormal(ray, outwardNormal);
-        hitResult.color = color;
+        hitResult.material = material;
         return true;
     }
 
     Float3 center;
-    Float3 color;
     Float radius;
+    Material* material;
 };

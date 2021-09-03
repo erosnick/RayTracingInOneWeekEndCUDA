@@ -9,7 +9,7 @@
 #include <cstdio>
 
 template<typename T>
-T* createObject() {
+T* createObjectPtr() {
     T* object = nullptr;
     gpuErrorCheck(cudaMallocManaged(&object, sizeof(T*)));
     return object;
@@ -23,18 +23,27 @@ T* createObjectArray(int32_t numObjects) {
 }
 
 template<typename T>
+T* createObjectPtrArray(int32_t numObjects) {
+    T* object = nullptr;
+    gpuErrorCheck(cudaMallocManaged(&object, sizeof(T*) * numObjects));
+    return object;
+}
+
+template<typename T>
 void deleteObject(T* object) {
     gpuErrorCheck(cudaFree(object));
 }
 
-constexpr auto SPHERES = 2;
+constexpr auto SPHERES = 4;
 CUDA_CONSTANT Sphere constantSpheres[SPHERES];
 
-CUDA_DEVICE bool hit(const Ray& ray, Float tMin, Float tMax, HitResult& hitResult) {
+CUDA_DEVICE bool hit(const Ray& ray, Float tMin, Float tMax, HitResult& hitResult, Sphere* spheres) {
     HitResult tempHitResult;
     bool bHitAnything = false;
     Float closestSoFar = tMax;
-    for (auto& sphere : constantSpheres) {
+    //for (auto& sphere : constantSpheres) {
+    for (auto i = 0; i < SPHERES; i++){
+        auto sphere = spheres[i];
         if (sphere.hit(ray, tMin, closestSoFar, tempHitResult)) {
             bHitAnything = true;
             closestSoFar = tempHitResult.t;
@@ -45,28 +54,29 @@ CUDA_DEVICE bool hit(const Ray& ray, Float tMin, Float tMax, HitResult& hitResul
     return bHitAnything;
 }
 
-CUDA_DEVICE Float3 rayColor(const Ray& ray, curandState* randState) {
+CUDA_DEVICE Float3 rayColor(const Ray& ray, curandState* randState, Sphere* spheres) {
     Ray currentRay = ray;
     auto currentAttenuation = make_float3(1.0f, 1.0f, 1.0f);
-    for (auto i = 0; i < 50; i++) {
+    for (auto i = 0; i < 5; i++) {
         HitResult hitResult;
         // Smaller tMin will has a impact on performance
-        Float tMin = 0.001f;
-        if (hit(currentRay, tMin, Math::infinity, hitResult)) {
-            auto& position = hitResult.position;
-            auto target = position + hitResult.normal + Utils::randomHemiSphere(hitResult.normal, randState);
-            // If hit, we need to take color contribution into account
-            //currentAttenuation *= 0.5f * hitResult.color;
-            currentAttenuation *= 0.5f;
-            auto direction = normalize(target - position);
-            currentRay = Ray(position, direction);
-        }
-        else {
+        //if (hit(currentRay, Math::epsilon, Math::infinity, hitResult, spheres)) {
+            //Float3 attenuation;
+            //if (hitResult.material->scatter(currentRay, hitResult, attenuation, currentRay, randState)) {
+            //    currentAttenuation *= attenuation;
+            //}
+        //    //auto direction = hitResult.normal + Utils::randomUnitVector(randState);
+        //    //currentRay = Ray(hitResult.position, normalize(direction));
+        //    //currentAttenuation *= 0.5f;
+        //}
+        //else {
             auto unitDirection = normalize(currentRay.direction);
             auto t = 0.5f * (unitDirection.y + 1.0f);
-            auto background = lerp(make_float3(1.0f, 1.0f, 1.0f), make_float3(0.5f, 0.7f, 1.0f), t);
-            return currentAttenuation * background;
-        }
+            //auto background = lerp(make_float3(1.0f, 1.0f, 1.0f), make_float3(0.5f, 0.7f, 1.0f), t);
+            auto background = (1.0f - t) * make_float3(1.0f, 1.0f, 1.0f) + t * make_float3(0.5f, 0.7f, 1.0f);
+            //return currentAttenuation * background;
+            return unitDirection;
+        //}
     }
 
     // exceeded recursion
@@ -84,7 +94,7 @@ CUDA_GLOBAL void renderInit(int32_t width, int32_t height, curandState* randStat
     }
 }
 
-CUDA_GLOBAL void render(Canvas canvas, Camera camera, curandState* randStates) {
+CUDA_GLOBAL void render(Canvas canvas, Camera camera, curandState* randStates, Sphere* spheres) {
     auto x = threadIdx.x + blockDim.x * blockIdx.x;
     auto y = threadIdx.y + blockDim.y * blockIdx.y;
     auto width = camera.getImageWidth();
@@ -98,19 +108,29 @@ CUDA_GLOBAL void render(Canvas canvas, Camera camera, curandState* randStates) {
         auto localRandState = randStates[index];
         for (auto i = 0; i < samplesPerPixel; i++) {
 
-            auto rx = curand_uniform(&localRandState);
-            auto ry = curand_uniform(&localRandState);
+            auto rx = 0.0f; // curand_uniform(&localRandState);
+            auto ry = 0.0f; // curand_uniform(&localRandState);
 
             auto dx = Float(x + rx) / (width - 1);
             auto dy = Float(y + ry) / (height - 1);
 
             auto ray = camera.getRay(dx, dy);
-            color += rayColor(ray, &localRandState);
+            color += rayColor(ray, &localRandState, spheres);
         }
         // Very important!!!
         randStates[index] = localRandState;
         canvas.writePixel(index, color / samplesPerPixel);
     }
+}
+
+template<typename T>
+CUDA_GLOBAL void createMaterial(Material** material, Float3 albedo, Float value = 1.0f) {
+    (*material) = new T(albedo, value);
+}
+
+template<typename T>
+CUDA_GLOBAL void deleteDeviceObject(T** object) {
+    delete (*object);
 }
 
 std::string toPPM(int32_t width, int32_t height) {
@@ -149,8 +169,8 @@ void writeToPPM(const std::string& path, uint8_t* pixelBuffer, int32_t width, in
 int main() {
     gpuErrorCheck(cudaDeviceSetLimit(cudaLimitStackSize, 8192));
 
-    constexpr auto width = 1200;
-    constexpr auto height = 600;
+    constexpr auto width = 1280;
+    constexpr auto height = 720;
     constexpr auto pixelCount = width * height;
 
     Canvas canvas(width, height);
@@ -161,15 +181,35 @@ int main() {
     //auto* camera = createObject<Camera>();
     //camera->initialize(width, height);
 
-    Sphere spheres[SPHERES];
+    Material** materials[SPHERES];
 
-    spheres[0].center = {0.0f, 0.0f, -1.0f};
-    spheres[0].color = make_float3(1.0f, 0.0f, 0.0f);
+    for (auto& material : materials) {
+        material = createObjectPtr<Material*>();
+    }
+
+    createMaterial<Metal><<<1, 1>>>(materials[0], make_float3(1.0f, 1.0f, 1.0f), 0.01f);
+    createMaterial<Lambertian><<<1, 1>>>(materials[1], make_float3(0.7f, 0.3f, 0.3f));
+    createMaterial<Metal><<<1, 1>>>(materials[2], make_float3(0.8f, 0.6f, 0.2f), 0.7f);
+    createMaterial<Lambertian><<<1, 1>>>(materials[3], make_float3(0.6f, 0.6f, 0.6f));
+    gpuErrorCheck(cudaDeviceSynchronize());
+
+    auto* spheres = createObjectArray<Sphere>(SPHERES);
+
+    spheres[0].center = {-1.0f, 0.0f, -1.0f};
+    spheres[0].material = *(materials[0]);
     spheres[0].radius = 0.5f;
 
-    spheres[1].center = { 0.0f, -100.5f, -1.0f };
-    spheres[1].color = make_float3(0.5f, 0.5f, 0.5f);
-    spheres[1].radius = 100.0f;
+    spheres[1].center = { 0.0f, 0.0f, -1.0f };
+    spheres[1].material = *(materials[1]);
+    spheres[1].radius = 0.5f;
+
+    spheres[2].center = { 1.0f, 0.0f, -1.0f };
+    spheres[2].material = *(materials[2]);
+    spheres[2].radius = 0.5f;
+
+    spheres[3].center = { 0.0f, -100.5f, -1.0f };
+    spheres[3].material = *(materials[3]);
+    spheres[3].radius = 100.0f;
 
     gpuErrorCheck(cudaMemcpyToSymbol(constantSpheres, spheres, sizeof(Sphere) * SPHERES));
 
@@ -184,7 +224,7 @@ int main() {
 
     GPUTimer timer("Rendering start...");
 
-    render<<<gridSize, blockSize>>>(canvas, camera, randStates);
+    render<<<gridSize, blockSize>>>(canvas, camera, randStates, spheres);
     gpuErrorCheck(cudaDeviceSynchronize());
 
     timer.stop("Rendering elapsed time");
@@ -194,6 +234,14 @@ int main() {
     Utils::openImage(L"render.png");
 
     deleteObject(randStates);
+
+    for (auto i = 0; i < SPHERES; i++) {
+        deleteDeviceObject<<<1, 1>>>(materials[i]);
+        gpuErrorCheck(cudaDeviceSynchronize());
+        gpuErrorCheck(cudaFree(materials[i]));
+    }
+
+    deleteObject(spheres);
 
     //deleteObject(camera);
 

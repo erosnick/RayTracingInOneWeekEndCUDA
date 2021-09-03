@@ -11,7 +11,6 @@
 #include "stb_image.h"
 #include "stb_image_write.h"
 
-#include "Vec3.h"
 #include "Buffer.h"
 
 class Canvas {
@@ -38,20 +37,20 @@ public:
         gpuErrorCheck(cudaFree(pixelBuffer));
     }
 
-    inline CUDA_HOST_DEVICE int32_t getWidth() const {
+    CUDA_DEVICE inline int32_t getWidth() const {
         return width;
     }
 
-    inline CUDA_HOST_DEVICE int32_t getHeight() const {
+    CUDA_DEVICE inline int32_t getHeight() const {
         return height;
     }
 
-    inline CUDA_HOST_DEVICE void writePixel(int32_t x, int32_t y, Float red, Float green, Float blue) {
+    CUDA_DEVICE inline void writePixel(int32_t x, int32_t y, Float red, Float green, Float blue) {
         auto index = y * width + x;
         writePixel(index, red, green, blue);
     }
 
-    inline CUDA_HOST_DEVICE void writePixel(int32_t index, Float red, Float green, Float blue) {
+    CUDA_DEVICE inline void writePixel(int32_t index, Float red, Float green, Float blue) {
         Float start = 0.0f;
         Float end = 0.999f;
         (*pixelBuffer)[index * 3] = uint8_t(255.99 * clamp(sqrt(red), start, end));
@@ -62,12 +61,8 @@ public:
         //(*pixelBuffer)[index * 3 + 2] = 256 * clamp(blue, start, end);
     }
 
-    inline CUDA_HOST_DEVICE void writePixel(int32_t index, Float3 color) {
+    CUDA_DEVICE inline void writePixel(int32_t index, Float3 color) {
         writePixel(index, color.x, color.y, color.z);
-    }
-
-    inline CUDA_HOST_DEVICE void writePixel(int32_t index, const Vec3& color) {
-        writePixel(index, color.x(), color.y(), color.z());
     }
 
     //inline Tuple pixelAt(int32_t x, int32_t y) {

@@ -23,10 +23,11 @@
     <ClInclude Include="CUDA.h" />
     <ClInclude Include="cutil_math.h" />
     <ClInclude Include="GPUTimer.h" />
+    <ClInclude Include="Material.h" />
+    <ClInclude Include="HitResult.h" />
     <ClInclude Include="Ray.h" />
     <ClInclude Include="Sphere.h" />
     <ClInclude Include="Utils.h" />
-    <ClInclude Include="Vec3.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Canvas.cpp" />

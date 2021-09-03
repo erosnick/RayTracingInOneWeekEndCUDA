@@ -35,15 +35,15 @@ public:
         printf("I'm dead.\n");
     }
 
-    inline CUDA_DEVICE int32_t getImageWidth() const {
+    CUDA_DEVICE inline int32_t getImageWidth() const {
         return imageWidth;
     }
 
-    inline CUDA_DEVICE int32_t getImageHeight() const {
+    CUDA_DEVICE inline int32_t getImageHeight() const {
         return imageHeight;
     }
 
-    inline CUDA_DEVICE Ray getRay(Float dx, Float dy) {
+    CUDA_DEVICE inline Ray getRay(Float dx, Float dy) {
         auto direction = lowerLeftCorner + dx * horizontal + dy * vertical;
         return Ray(origin, normalize(direction));
     }

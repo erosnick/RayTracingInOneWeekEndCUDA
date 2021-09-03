@@ -29,12 +29,12 @@ namespace Utils {
     }
 
     // Random double in [0, 1]
-    inline CUDA_DEVICE Float random(curandState* randState) {
+    CUDA_DEVICE inline Float random(curandState* randState) {
         return curand_uniform(randState);
     }
 
     // Random float3 in [0, 1]
-    inline CUDA_DEVICE Float3 randomVector(curandState* randState) {
+    CUDA_DEVICE inline Float3 randomVector(curandState* randState) {
         Float x = curand_uniform(randState);
         Float y = curand_uniform(randState);
         Float z = curand_uniform(randState);
@@ -43,11 +43,11 @@ namespace Utils {
     }
 
     // Random float3 in [min, max]
-    inline CUDA_DEVICE Float3 randomVector(curandState* randState, Float min, Float max) {
+    CUDA_DEVICE inline Float3 randomVector(curandState* randState, Float min, Float max) {
         return (min + (max - min) * randomVector(randState));
     }
 
-    inline CUDA_DEVICE Float3 randomInUnitSphere(curandState* randState) {
+    CUDA_DEVICE inline Float3 randomInUnitSphere(curandState* randState) {
         while (true) {
             auto position = randomVector(randState, -1.0f, 1.0f);
             if (lengthSquared(position) >= 1.0f) {
@@ -58,11 +58,11 @@ namespace Utils {
         }
     }
 
-    inline CUDA_DEVICE Float3 randomUnitVector(curandState* randState) {
+    CUDA_DEVICE inline Float3 randomUnitVector(curandState* randState) {
         return normalize(randomInUnitSphere(randState));
     }
 
-    inline CUDA_DEVICE Float3 randomHemiSphere(const Float3& normal, curandState* randState) {
+    CUDA_DEVICE inline Float3 randomHemiSphere(const Float3& normal, curandState* randState) {
         auto inUnitSphere = randomInUnitSphere(randState);
 
         //  In the same hemisphere as the normal
@@ -70,6 +70,16 @@ namespace Utils {
             return inUnitSphere;
         }
         return -inUnitSphere;
+    }
+
+    CUDA_DEVICE inline bool nearZero(const Float3& v) {
+        // Return true if the vector is close to zero in all dimensions.
+        const auto s = 1e-8;
+        return (fabs(v.x) < s) && (fabs(v.y) < s) && (fabs(v.z) < s);
+    }
+
+    CUDA_DEVICE inline Float3 reflect(const Float3& v, const Float3& n) {
+        return v - 2.0f * dot(v, n) * n;
     }
 
     void openImage(const std::wstring& path);
