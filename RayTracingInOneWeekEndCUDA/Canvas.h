@@ -54,9 +54,9 @@ public:
     inline CUDA_HOST_DEVICE void writePixel(int32_t index, Float red, Float green, Float blue) {
         Float start = 0.0f;
         Float end = 0.999f;
-        (*pixelBuffer)[index * 3] = uint8_t(255.99 * clamp(sqrt(red), start, end));
-        (*pixelBuffer)[index * 3 + 1] = uint8_t(255.99 * clamp(sqrt(green), start, end));
-        (*pixelBuffer)[index * 3 + 2] = uint8_t(255.99 * clamp(sqrt(blue), start, end));
+        (*pixelBuffer)[index * 3] = uint8_t(255.99f * clamp(sqrt(red), start, end));
+        (*pixelBuffer)[index * 3 + 1] = uint8_t(255.99f * clamp(sqrt(green), start, end));
+        (*pixelBuffer)[index * 3 + 2] = uint8_t(255.99f * clamp(sqrt(blue), start, end));
         //(*pixelBuffer)[index * 3] = 256 * clamp(red, start, end);
         //(*pixelBuffer)[index * 3 + 1] = 256 * clamp(green, start, end);
         //(*pixelBuffer)[index * 3 + 2] = 256 * clamp(blue, start, end);

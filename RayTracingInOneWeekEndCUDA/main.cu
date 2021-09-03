@@ -54,7 +54,8 @@ CUDA_DEVICE Float3 rayColor(const Ray& ray, curandState* randState) {
         Float tMin = 0.001f;
         if (hit(currentRay, tMin, Math::infinity, hitResult)) {
             auto& position = hitResult.position;
-            auto target = position + hitResult.normal + Utils::randomHemiSphere(hitResult.normal, randState);
+            //auto target = position + hitResult.normal + Utils::randomHemiSphere(hitResult.normal, randState);
+            auto target = position + hitResult.normal + Utils::randomInUnitSphere(randState);
             // If hit, we need to take color contribution into account
             //currentAttenuation *= 0.5f * hitResult.color;
             currentAttenuation *= 0.5f;
@@ -149,8 +150,8 @@ void writeToPPM(const std::string& path, uint8_t* pixelBuffer, int32_t width, in
 int main() {
     gpuErrorCheck(cudaDeviceSetLimit(cudaLimitStackSize, 8192));
 
-    constexpr auto width = 1200;
-    constexpr auto height = 600;
+    constexpr auto width = 1280;
+    constexpr auto height = 720;
     constexpr auto pixelCount = width * height;
 
     Canvas canvas(width, height);
