@@ -4,7 +4,7 @@
 #include "device_launch_parameters.h"
 #include <curand_kernel.h>
 
-#include "CUDA.h"
+#include "CUDATypes.h"
 
 #include <string>
 #include <algorithm>

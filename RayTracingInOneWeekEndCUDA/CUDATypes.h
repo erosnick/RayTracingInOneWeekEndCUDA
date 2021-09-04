@@ -11,11 +11,13 @@
 
 #ifdef USE_DOUBLE
 using Float = double;
+using Float2 = double2;
 using Float3 = double3;
 using Float4 = double4;
 #define make_float3 make_double3
 #else
 using Float = float;
+using Float2 = float2;
 using Float3 = float3;
 using Float4 = float4;
 #define fmod fmodf

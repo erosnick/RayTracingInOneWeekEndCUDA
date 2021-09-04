@@ -3,7 +3,7 @@
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 
-#include "CUDA.h"
+#include "CUDATypes.h"
 
 #include <cstdio>
 #include <string>

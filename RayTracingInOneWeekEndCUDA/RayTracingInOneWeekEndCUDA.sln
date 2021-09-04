@@ -7,20 +7,60 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "RayTracingInOneWeekEndCUDA"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Test", "..\..\Test\Test.vcxproj", "{004CB183-13D3-4039-92D2-4FFA4E90CEB1}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CUDAGLFW", "..\..\CUDAGLFW\CUDAGLFW.vcxproj", "{11933CB9-061F-4CE6-9210-F7F5B95EAFC3}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		GPU-Realtime|x64 = GPU-Realtime|x64
+		GPU-Realtime|x86 = GPU-Realtime|x86
+		GPU-Realtime-Debug|x64 = GPU-Realtime-Debug|x64
+		GPU-Realtime-Debug|x86 = GPU-Realtime-Debug|x86
 		Release|x64 = Release|x64
+		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{E45A458B-56C8-45E4-B351-5E143526518F}.Debug|x64.ActiveCfg = Debug|x64
 		{E45A458B-56C8-45E4-B351-5E143526518F}.Debug|x64.Build.0 = Debug|x64
+		{E45A458B-56C8-45E4-B351-5E143526518F}.Debug|x86.ActiveCfg = Debug|x64
+		{E45A458B-56C8-45E4-B351-5E143526518F}.GPU-Realtime|x64.ActiveCfg = GPU-Realtime|x64
+		{E45A458B-56C8-45E4-B351-5E143526518F}.GPU-Realtime|x64.Build.0 = GPU-Realtime|x64
+		{E45A458B-56C8-45E4-B351-5E143526518F}.GPU-Realtime|x86.ActiveCfg = GPU-Realtime|x64
+		{E45A458B-56C8-45E4-B351-5E143526518F}.GPU-Realtime-Debug|x64.ActiveCfg = GPU-Realtime-Debug|x64
+		{E45A458B-56C8-45E4-B351-5E143526518F}.GPU-Realtime-Debug|x64.Build.0 = GPU-Realtime-Debug|x64
+		{E45A458B-56C8-45E4-B351-5E143526518F}.GPU-Realtime-Debug|x86.ActiveCfg = GPU-Realtime-Debug|x64
 		{E45A458B-56C8-45E4-B351-5E143526518F}.Release|x64.ActiveCfg = Release|x64
 		{E45A458B-56C8-45E4-B351-5E143526518F}.Release|x64.Build.0 = Release|x64
+		{E45A458B-56C8-45E4-B351-5E143526518F}.Release|x86.ActiveCfg = Release|x64
 		{004CB183-13D3-4039-92D2-4FFA4E90CEB1}.Debug|x64.ActiveCfg = Debug|x64
 		{004CB183-13D3-4039-92D2-4FFA4E90CEB1}.Debug|x64.Build.0 = Debug|x64
+		{004CB183-13D3-4039-92D2-4FFA4E90CEB1}.Debug|x86.ActiveCfg = Debug|x64
+		{004CB183-13D3-4039-92D2-4FFA4E90CEB1}.GPU-Realtime|x64.ActiveCfg = Release|x64
+		{004CB183-13D3-4039-92D2-4FFA4E90CEB1}.GPU-Realtime|x64.Build.0 = Release|x64
+		{004CB183-13D3-4039-92D2-4FFA4E90CEB1}.GPU-Realtime|x86.ActiveCfg = Release|x64
+		{004CB183-13D3-4039-92D2-4FFA4E90CEB1}.GPU-Realtime|x86.Build.0 = Release|x64
+		{004CB183-13D3-4039-92D2-4FFA4E90CEB1}.GPU-Realtime-Debug|x64.ActiveCfg = Debug|x64
+		{004CB183-13D3-4039-92D2-4FFA4E90CEB1}.GPU-Realtime-Debug|x64.Build.0 = Debug|x64
+		{004CB183-13D3-4039-92D2-4FFA4E90CEB1}.GPU-Realtime-Debug|x86.ActiveCfg = Release|x64
+		{004CB183-13D3-4039-92D2-4FFA4E90CEB1}.GPU-Realtime-Debug|x86.Build.0 = Release|x64
 		{004CB183-13D3-4039-92D2-4FFA4E90CEB1}.Release|x64.ActiveCfg = Release|x64
 		{004CB183-13D3-4039-92D2-4FFA4E90CEB1}.Release|x64.Build.0 = Release|x64
+		{004CB183-13D3-4039-92D2-4FFA4E90CEB1}.Release|x86.ActiveCfg = Release|x64
+		{11933CB9-061F-4CE6-9210-F7F5B95EAFC3}.Debug|x64.ActiveCfg = Debug|x64
+		{11933CB9-061F-4CE6-9210-F7F5B95EAFC3}.Debug|x64.Build.0 = Debug|x64
+		{11933CB9-061F-4CE6-9210-F7F5B95EAFC3}.Debug|x86.ActiveCfg = Debug|x64
+		{11933CB9-061F-4CE6-9210-F7F5B95EAFC3}.GPU-Realtime|x64.ActiveCfg = Debug|x64
+		{11933CB9-061F-4CE6-9210-F7F5B95EAFC3}.GPU-Realtime|x64.Build.0 = Debug|x64
+		{11933CB9-061F-4CE6-9210-F7F5B95EAFC3}.GPU-Realtime|x86.ActiveCfg = Debug|x64
+		{11933CB9-061F-4CE6-9210-F7F5B95EAFC3}.GPU-Realtime|x86.Build.0 = Debug|x64
+		{11933CB9-061F-4CE6-9210-F7F5B95EAFC3}.GPU-Realtime-Debug|x64.ActiveCfg = Debug|x64
+		{11933CB9-061F-4CE6-9210-F7F5B95EAFC3}.GPU-Realtime-Debug|x64.Build.0 = Debug|x64
+		{11933CB9-061F-4CE6-9210-F7F5B95EAFC3}.GPU-Realtime-Debug|x86.ActiveCfg = Debug|x64
+		{11933CB9-061F-4CE6-9210-F7F5B95EAFC3}.GPU-Realtime-Debug|x86.Build.0 = Debug|x64
+		{11933CB9-061F-4CE6-9210-F7F5B95EAFC3}.Release|x64.ActiveCfg = Release|x64
+		{11933CB9-061F-4CE6-9210-F7F5B95EAFC3}.Release|x64.Build.0 = Release|x64
+		{11933CB9-061F-4CE6-9210-F7F5B95EAFC3}.Release|x86.ActiveCfg = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

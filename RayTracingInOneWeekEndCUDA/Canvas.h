@@ -56,13 +56,27 @@ public:
         (*pixelBuffer)[index * 3] = uint8_t(255.99f * clamp(sqrt(red), start, end));
         (*pixelBuffer)[index * 3 + 1] = uint8_t(255.99f * clamp(sqrt(green), start, end));
         (*pixelBuffer)[index * 3 + 2] = uint8_t(255.99f * clamp(sqrt(blue), start, end));
-        //(*pixelBuffer)[index * 3] = 256 * clamp(red, start, end);
-        //(*pixelBuffer)[index * 3 + 1] = 256 * clamp(green, start, end);
-        //(*pixelBuffer)[index * 3 + 2] = 256 * clamp(blue, start, end);
     }
 
-    CUDA_DEVICE inline void writePixel(int32_t index, Float3 color) {
+    CUDA_DEVICE inline void writePixel(int32_t index, const Float3& color) {
         writePixel(index, color.x, color.y, color.z);
+    }
+
+    CUDA_DEVICE inline void accumulatePixel(int32_t index, const Float3& color, int32_t sampleCount) {
+        accumulatePixel(index, color.x, color.y, color.z, sampleCount);
+    }
+
+    CUDA_DEVICE inline void accumulatePixel(int32_t x, int32_t y, Float red, Float green, Float blue, int32_t sampleCount) {
+        auto index = y * width + x;
+        accumulatePixel(index, red, green, blue, sampleCount);
+    }
+
+    CUDA_DEVICE inline void accumulatePixel(int32_t index, Float red, Float green, Float blue, int32_t sampleCount) {
+        Float start = 0.0f;
+        Float end = 0.999f;
+        (*pixelBuffer)[index * 3] += uint8_t(255.99f * clamp(sqrt(red), start, end));
+        (*pixelBuffer)[index * 3 + 1] += uint8_t(255.99f * clamp(sqrt(green), start, end));
+        (*pixelBuffer)[index * 3 + 2] += uint8_t(255.99f * clamp(sqrt(blue), start, end));
     }
 
     //inline Tuple pixelAt(int32_t x, int32_t y) {

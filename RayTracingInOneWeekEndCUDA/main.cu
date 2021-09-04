@@ -1,4 +1,5 @@
 ﻿
+#include "main.h"
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 #include "Utils.h"
@@ -32,6 +33,11 @@ T* createObjectPtrArray(int32_t numObjects) {
 template<typename T>
 void deleteObject(T* object) {
     gpuErrorCheck(cudaFree(object));
+}
+
+template<typename T>
+CUDA_GLOBAL void deleteDeviceObject(T** object) {
+    delete (*object);
 }
 
 constexpr auto SPHERES = 5;
@@ -121,11 +127,40 @@ CUDA_GLOBAL void renderInit(int32_t width, int32_t height, curandState* randStat
     }
 }
 
-CUDA_GLOBAL void render(Canvas canvas, Camera camera, curandState* randStates, Sphere* spheres) {
+//CUDA_GLOBAL void render(Canvas canvas, Camera camera, curandState* randStates, Sphere* spheres) {
+//    auto x = threadIdx.x + blockDim.x * blockIdx.x;
+//    auto y = threadIdx.y + blockDim.y * blockIdx.y;
+//    auto width = canvas.getWidth();
+//    auto height = canvas.getHeight();
+//    constexpr auto samplesPerPixel = 1;
+//    constexpr auto maxDepth = 5;
+//    auto index = y * width + x;
+//
+//    if (index < (width * height)) {
+//        auto color = make_float3(0.0f, 0.0f, 0.0f);
+//        auto localRandState = randStates[index];
+//        for (auto i = 0; i < samplesPerPixel; i++) {
+//
+//            auto rx = curand_uniform(&localRandState);
+//            auto ry = curand_uniform(&localRandState);
+//
+//            auto dx = Float(x + rx) / (width - 1);
+//            auto dy = Float(y + ry) / (height - 1);
+//
+//            auto ray = camera.getRay(dx, dy);
+//            color += rayColor(ray, &localRandState, spheres);
+//        }
+//        // Very important!!!
+//        randStates[index] = localRandState;
+//        canvas.writePixel(index, color / samplesPerPixel);
+//    }
+//}
+
+CUDA_GLOBAL void render(Canvas* canvas, Camera* camera, curandState* randStates, Sphere* spheres, int32_t sampleCount) {
     auto x = threadIdx.x + blockDim.x * blockIdx.x;
     auto y = threadIdx.y + blockDim.y * blockIdx.y;
-    auto width = canvas.getWidth();
-    auto height = canvas.getHeight();
+    auto width = canvas->getWidth();
+    auto height = canvas->getHeight();
     constexpr auto samplesPerPixel = 1;
     constexpr auto maxDepth = 5;
     auto index = y * width + x;
@@ -141,12 +176,13 @@ CUDA_GLOBAL void render(Canvas canvas, Camera camera, curandState* randStates, S
             auto dx = Float(x + rx) / (width - 1);
             auto dy = Float(y + ry) / (height - 1);
 
-            auto ray = camera.getRay(dx, dy);
+            auto ray = camera->getRay(dx, dy);
             color += rayColor(ray, &localRandState, spheres);
         }
         // Very important!!!
         randStates[index] = localRandState;
-        canvas.writePixel(index, color / samplesPerPixel);
+        canvas->writePixel(index, color / samplesPerPixel);
+        //canvas->accumulatePixel(index, color, sampleCount);
     }
 }
 
@@ -162,37 +198,45 @@ CUDA_GLOBAL void createDieletricMaterial(Material** material, Float indexOfRefra
     (*material) = new Dieletric(indexOfRefraction);
 }
 
-template<typename T>
-CUDA_GLOBAL void deleteDeviceObject(T** object) {
-    delete (*object);
-}
-
-#define RESOLUTION 1
-
-int main() {
-    gpuErrorCheck(cudaDeviceSetLimit(cudaLimitStackSize, 8192));
+#define RESOLUTION 2
 
 #if RESOLUTION == 0
-    constexpr auto width = 512;
-    constexpr auto height = 384;
+int32_t width = 512;
+int32_t height = 384;
 #elif RESOLUTION == 1
-    constexpr auto width = 1280;
-    constexpr auto height = 720;
+int32_t width = 1024;
+int32_t height = 576;
 #elif RESOLUTION == 2
-    constexpr auto width = 1920;
-    constexpr auto height = 1080;
+int32_t width = 1280;
+int32_t height = 720;
+#elif RESOLUTION == 3
+int32_t width = 1920;
+int32_t height = 1080;
 #endif
-    constexpr auto pixelCount = width * height;
 
-    Canvas canvas(width, height);
-    //auto* canvas = createObject<Canvas>();
-    //canvas->initialize(width, height);
+int32_t sampleCount = 0;
 
-    Camera camera(make_float3(-2.0f, 2.0f, 1.0f), make_float3(0.0f, 0.0f, -1.0f), make_float3(0.0f, 1.0f, 0.0f), Float(width) / height, 20.0f);
-    //auto* camera = createObject<Camera>();
-    //camera->initialize(width, height);
+Canvas* canvas = nullptr;
+Camera* camera = nullptr;
+Sphere* spheres = nullptr;
+Material** materials[SPHERES];
+curandState* randStates = nullptr;
+std::shared_ptr<ImageData> imageData = nullptr;
 
-    Material** materials[SPHERES];
+dim3 blockSize(32, 32);
+dim3 gridSize((width + blockSize.x - 1) / blockSize.x,
+              (height + blockSize.y - 1) / blockSize.y);
+
+void initialize(int32_t width, int32_t height) {
+    //Canvas canvas(width, height);
+    canvas = createObjectPtr<Canvas>();
+    canvas->initialize(width, height);
+
+    //Camera camera(make_float3(-2.0f, 2.0f, 1.0f), make_float3(0.0f, 0.0f, -1.0f), make_float3(0.0f, 1.0f, 0.0f), Float(width) / height, 20.0f);
+    camera = createObjectPtr<Camera>();
+    camera->initialize(make_float3(-2.0f, 2.0f, 1.0f), make_float3(0.0f, 0.0f, -1.0f), make_float3(0.0f, 1.0f, 0.0f), Float(width) / height, 20.0f);
+
+    spheres = createObjectArray<Sphere>(SPHERES);
 
     for (auto& material : materials) {
         material = createObjectPtr<Material*>();
@@ -206,67 +250,71 @@ int main() {
     createLambertianMaterial<<<1, 1>>>(materials[4], make_float3(0.8f, 0.8f, 0.0f));
     gpuErrorCheck(cudaDeviceSynchronize());
 
-    auto* spheres = createObjectArray<Sphere>(SPHERES);
+    spheres[0] = { { -1.0f, 0.0f, -1.0f},   0.5f, *(materials[0]), true };
+    spheres[1] = { { -1.0f, 0.0f, -1.0f }, -0.4f, *(materials[1]), false };
+    spheres[2] = { {  0.0f, 0.0f, -1.0f },  0.5f, *(materials[2]), true };
+    spheres[3] = { {  1.0f, 0.0f, -1.0f },  0.5f, *(materials[3]), true };
+    spheres[4] = { {  0.0f, -100.5f, -1.0f }, 100.0f, *(materials[4]), true };
 
-    spheres[0].center = {-1.0f, 0.0f, -1.0f};
-    spheres[0].material = *(materials[0]);
-    spheres[0].radius = 0.5f;
-    spheres[0].bShading = true;
-
-    spheres[1].center = { -1.0f, 0.0f, -1.0f };
-    spheres[1].material = *(materials[1]);
-    spheres[1].radius = -0.4f;
-    spheres[1].bShading = false;
-
-    spheres[2].center = { 0.0f, 0.0f, -1.0f };
-    spheres[2].material = *(materials[2]);
-    spheres[2].radius = 0.5f;
-    spheres[2].bShading = true;
-
-    spheres[3].center = { 1.0f, 0.0f, -1.0f };
-    spheres[3].material = *(materials[3]);
-    spheres[3].radius = 0.5f;
-    spheres[3].bShading = true;
-
-    spheres[4].center = { 0.0f, -100.5f, -1.0f };
-    spheres[4].material = *(materials[4]);
-    spheres[4].radius = 100.0f;
-    spheres[4].bShading = true;
-
-    gpuErrorCheck(cudaMemcpyToSymbol(constantSpheres, spheres, sizeof(Sphere) * SPHERES));
-
-    auto* randStates = createObjectArray<curandState>(pixelCount);
-    
-    dim3 blockSize(32, 32);
-    dim3 gridSize((width + blockSize.x - 1) / blockSize.x,
-                  (height + blockSize.y - 1) / blockSize.y);
+    auto pixelCount = width * height;
+    randStates = createObjectArray<curandState>(pixelCount);
 
     renderInit<<<gridSize, blockSize>>>(width, height, randStates);
     gpuErrorCheck(cudaDeviceSynchronize());
 
-    GPUTimer timer("Rendering start...");
+    imageData = std::make_shared<ImageData>();
 
-    render<<<gridSize, blockSize>>>(canvas, camera, randStates, spheres);
+    imageData->width = width;
+    imageData->height = height;
+    imageData->channels = 3;
+    imageData->size = pixelCount * 3;
+}
+
+void pathTracing() {
+    render<<<gridSize, blockSize>>>(canvas, camera, randStates, spheres, sampleCount);
     gpuErrorCheck(cudaDeviceSynchronize());
 
-    timer.stop("Rendering elapsed time");
+    sampleCount++;
+    imageData->data = canvas->getPixelBuffer();
 
-    canvas.writeToPNG("render.png");
-    Utils::openImage(L"render.png");
+    if (imageData->data == nullptr) {
+        imageData->data = canvas->getPixelBuffer();
+    }
+}
+
+void cleanup() {
     deleteObject(randStates);
 
     for (auto i = 0; i < SPHERES; i++) {
         deleteDeviceObject<<<1, 1>>>(materials[i]);
         gpuErrorCheck(cudaDeviceSynchronize());
         gpuErrorCheck(cudaFree(materials[i]));
-    }
+}
 
     deleteObject(spheres);
 
-    //deleteObject(camera);
+    deleteObject(camera);
+    canvas->uninitialize();
+    deleteObject(canvas);
+}
 
-    canvas.uninitialize();
-    //deleteObject(canvas);
+#ifndef GPU_REALTIME
+int main() {
+    //gpuErrorCheck(cudaDeviceSetLimit(cudaLimitStackSize, 8192));
+
+    initialize(width, height);
+
+    //gpuErrorCheck(cudaMemcpyToSymbol(constantSpheres, spheres, sizeof(Sphere) * SPHERES));
+    
+    GPUTimer timer("Rendering start...");
+    pathTracing();
+    timer.stop("Rendering elapsed time");
+
+    canvas->writeToPNG("render.png");
+    Utils::openImage(L"render.png");
+
+    cleanup();
 
     return 0;
 }
+#endif // !GPU_REALTIME

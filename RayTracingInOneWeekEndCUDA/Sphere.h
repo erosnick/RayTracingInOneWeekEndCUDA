@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CUDA.h"
+#include "CUDATypes.h"
 #include "Vec3.h"
 #include "HitResult.h"
 #include "Material.h"
