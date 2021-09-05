@@ -18,24 +18,16 @@ __global__ void kernel(cudaSurfaceObject_t input, int width, int height, uint8_t
     unsigned int xPx = threadIdx.x + blockIdx.x * blockDim.x;
     unsigned int yPx = threadIdx.y + blockIdx.y * blockDim.y;
 
-
+    auto index = yPx * width + xPx;
     //Don't do any computation if this thread is outside of the surface bounds.
-    if (xPx >= width || yPx >= height) return;
+    if (index >= (width * height)) return;
 
-    //Copy the contents of input to output.
-#ifdef USE_1
-    uchar4 pixel = { 255,128,0,255 };
-    //Read a pixel from the input. Disable to default to the flat orange color above
-    surf2Dread<uchar4>(&pixel, input, xPx * sizeof(uchar4), yPx, cudaBoundaryModeClamp);
-
-#else
     uchar4 pixel;
-    pixel.x = data[(xPx + yPx * width) * 3 + 0];
-    pixel.y = data[(xPx + yPx * width) * 3 + 1];
-    pixel.z = data[(xPx + yPx * width) * 3 + 2];
+    pixel.x = data[index * 3 + 0];
+    pixel.y = data[index * 3 + 1];
+    pixel.z = data[index * 3 + 2];
     pixel.w = 255;
     surf2Dwrite(pixel, input, xPx * sizeof(uchar4), yPx);
-#endif
 }
 
 void Processor::setInput(uint8_t* const data, int imageWidth, int imageHeight)
@@ -96,14 +88,14 @@ void Processor::setInput(uint8_t* const data, int imageWidth, int imageHeight)
 
 void Processor::processData(uint8_t* data)
 {
-    const int threadsPerBlock = 128;
-
     //Call the algorithm
 
     //Set the number of blocks to call the kernel with.
-    dim3 blocks((unsigned int)ceil((float)imageInputDimensions.width / threadsPerBlock), imageInputDimensions.height);
+    dim3 blockSize(32, 32);
+    dim3 gridSize((imageInputDimensions.width + blockSize.x - 1) / blockSize.x,
+                  (imageInputDimensions.height + blockSize.y - 1) / blockSize.y);
 
-    kernel<<<blocks, threadsPerBlock>>>(d_imageInputTexture, imageInputDimensions.width, imageInputDimensions.height, data);
+    kernel<<<gridSize, blockSize >>>(d_imageInputTexture, imageInputDimensions.width, imageInputDimensions.height, data);
 
     //Sync the surface with the texture
     cudaDeviceSynchronize();

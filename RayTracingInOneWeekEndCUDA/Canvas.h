@@ -12,6 +12,7 @@
 #include "stb_image_write.h"
 
 #include "Buffer.h"
+#include "Memory.h"
 
 class Canvas {
 public:
@@ -28,11 +29,17 @@ public:
         height = inHeight;
         auto size = static_cast<size_t>(width * height * 3);
 
-        gpuErrorCheck(cudaMallocManaged(&pixelBuffer, sizeof(Buffer*)));
+        gpuErrorCheck(cudaMallocManaged(&pixelBuffer, sizeof(Buffer<uint8_t>*)));
         pixelBuffer->initialize(size);
+
+        gpuErrorCheck(cudaMallocManaged(&accumulationBuffer, sizeof(Buffer<uint32_t>*)));
+        accumulationBuffer->initialize(size);
     }
 
     void uninitialize() {
+        accumulationBuffer->uninitialize();
+        gpuErrorCheck(cudaFree(accumulationBuffer));
+
         pixelBuffer->uninitialize();
         gpuErrorCheck(cudaFree(pixelBuffer));
     }
@@ -62,21 +69,28 @@ public:
         writePixel(index, color.x, color.y, color.z);
     }
 
-    CUDA_DEVICE inline void accumulatePixel(int32_t index, const Float3& color, int32_t sampleCount) {
-        accumulatePixel(index, color.x, color.y, color.z, sampleCount);
+    CUDA_DEVICE inline void accumulatePixel(int32_t index, const Float3& color) {
+        accumulatePixel(index, color.x, color.y, color.z);
     }
 
-    CUDA_DEVICE inline void accumulatePixel(int32_t x, int32_t y, Float red, Float green, Float blue, int32_t sampleCount) {
+    CUDA_DEVICE inline void accumulatePixel(int32_t x, int32_t y, Float red, Float green, Float blue) {
         auto index = y * width + x;
-        accumulatePixel(index, red, green, blue, sampleCount);
+        accumulatePixel(index, red, green, blue);
     }
 
-    CUDA_DEVICE inline void accumulatePixel(int32_t index, Float red, Float green, Float blue, int32_t sampleCount) {
+    CUDA_DEVICE inline void accumulatePixel(int32_t index, Float red, Float green, Float blue) {
         Float start = 0.0f;
         Float end = 0.999f;
-        (*pixelBuffer)[index * 3] += uint8_t(255.99f * clamp(sqrt(red), start, end));
-        (*pixelBuffer)[index * 3 + 1] += uint8_t(255.99f * clamp(sqrt(green), start, end));
-        (*pixelBuffer)[index * 3 + 2] += uint8_t(255.99f * clamp(sqrt(blue), start, end));
+
+        auto r = uint8_t(255.99f * clamp(sqrt(red), start, end));
+        auto g = uint8_t(255.99f * clamp(sqrt(green), start, end));
+        auto b = uint8_t(255.99f * clamp(sqrt(blue), start, end));
+        (*accumulationBuffer)[index * 3] += r;
+        (*accumulationBuffer)[index * 3 + 1] += g;
+        (*accumulationBuffer)[index * 3 + 2] += b;
+        (*pixelBuffer)[index * 3] = (*accumulationBuffer)[index * 3] / sampleCount;
+        (*pixelBuffer)[index * 3 + 1] = (*accumulationBuffer)[index * 3 + 1] / sampleCount;
+        (*pixelBuffer)[index * 3 + 2] = (*accumulationBuffer)[index * 3 + 2] / sampleCount;
     }
 
     //inline Tuple pixelAt(int32_t x, int32_t y) {
@@ -135,11 +149,37 @@ public:
         delete[] imageData;
     }
 
+    CUDA_HOST_DEVICE inline void clearPixel(int32_t index, const Float3& clearColor = make_float3(0.0f, 0.0f, 0.0f)) {
+        (*accumulationBuffer)[index * 3] = 0;
+        (*accumulationBuffer)[index * 3 + 1] = 0;
+        (*accumulationBuffer)[index * 3+ 2] = 0;
+    }
+
+    CUDA_HOST_DEVICE inline void incrementSampleCount() {
+        sampleCount++;
+    }
+
+    CUDA_HOST_DEVICE inline void resetSampleCount() {
+        sampleCount = 0;
+    }
+
+    CUDA_HOST_DEVICE inline uint32_t getSampleCount() const {
+        return sampleCount;
+    }
+
+    CUDA_HOST_DEVICE inline void print() const {
+        for (auto i = 0; i < accumulationBuffer->size; i++) {
+            printf("%d\n", (*accumulationBuffer)[i]);
+        }
+    }
+
 private:
-    Buffer* pixelBuffer;
+    Buffer<uint8_t>* pixelBuffer;
+    Buffer<uint32_t>* accumulationBuffer;
 
     int32_t width;
     int32_t height;
+    uint32_t sampleCount;
 };
 
 inline Canvas* createCanvas(int32_t width, int32_t height) {

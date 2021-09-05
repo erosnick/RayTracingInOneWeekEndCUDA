@@ -19,24 +19,58 @@ public:
         fov = inFOV;
 
         focalLength = 1.0f;
+        cameraSpeed = 6.0f;
 
         scale = tan(Math::radians(fov / 2.0f));
 
         viewportHeight = 2.0f * scale;
         viewportWidth = viewportHeight * aspectRatio;
 
-        auto w = normalize(eye - center);
-        auto u = normalize(cross(up, w));
-        auto v = cross(w, u);
-
-        origin = eye;
-        horizontal = viewportWidth * u;
-        vertical = viewportHeight * v;
-        lowerLeftCorner = origin - horizontal / 2.0f - vertical / 2.0f - w;
+        bIsDirty = true;
+        updateViewMatrix();
     }
 
     ~Camera() {
         printf("I'm dead.\n");
+    }
+
+    void walk(Float delta) {
+        eye += forward * cameraSpeed * delta;
+        center += forward * cameraSpeed * delta;
+        bIsDirty = true;
+    }
+
+    void strafe(Float delta) {
+        eye += right * cameraSpeed * delta;
+        center += right * cameraSpeed * delta;
+        bIsDirty = true;
+    }
+
+    void raise(Float delta) {
+        eye += up * cameraSpeed * delta;
+        center += up * cameraSpeed * delta;
+        bIsDirty = true;
+    }
+
+    CUDA_HOST_DEVICE void updateViewMatrix() {
+        if (bIsDirty) {
+            forward = normalize(eye - center);
+            right = normalize(cross(up, forward));
+            up = cross(forward, right);
+
+            origin = eye;
+            horizontal = viewportWidth * right;
+            vertical = viewportHeight * up;
+            lowerLeftCorner = origin - horizontal / 2.0f - vertical / 2.0f - forward;
+        }
+    }
+
+    bool isDirty() const {
+        return bIsDirty;
+    }
+
+    void resetDiryFlag() {
+        bIsDirty = false;
     }
 
     CUDA_DEVICE inline Ray getRay(Float dx, Float dy) {
@@ -50,11 +84,17 @@ private:
     Float scale = 1.0f;
     Float viewportHeight;
     Float viewportWidth;
+    Float cameraSpeed = 6.0f;
+
     Float3 eye;
     Float3 center;
+    Float3 forward;
+    Float3 right;
     Float3 up;
     Float3 horizontal;
     Float3 vertical;
     Float3 origin;
     Float3 lowerLeftCorner;
+
+    bool bIsDirty;
 };

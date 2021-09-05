@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <cassert>
 
+template<typename T>
 class Buffer {
 public:
     Buffer() {}
@@ -22,18 +23,24 @@ public:
 
     void initialize(int32_t inSize) {
         size = inSize;
-        gpuErrorCheck(cudaMallocManaged(&buffer, size));
+        gpuErrorCheck(cudaMallocManaged(&buffer, sizeof(T) * size));
     }
 
     void uninitialize() {
         gpuErrorCheck(cudaFree(buffer));
     }
 
-    CUDA_HOST_DEVICE uint8_t operator[](int32_t index) const {
+    CUDA_HOST_DEVICE T operator[](int32_t index) const {
+        if (index >= size)
+        {
+            printf("Index out of range.\n");
+            assert(index < size);
+        }
+
         return buffer[index];
     }
 
-    CUDA_HOST_DEVICE uint8_t& operator[](int32_t index) {
+    CUDA_HOST_DEVICE T& operator[](int32_t index) {
         if (index >= size)
         {
             printf("Index out of range.\n");
@@ -42,10 +49,10 @@ public:
         return buffer[index];
     }
 
-    uint8_t* get() {
+    T* get() {
         return buffer;
     }
 
-    uint8_t* buffer = nullptr;
+    T* buffer = nullptr;
     int32_t size = 0;
 };

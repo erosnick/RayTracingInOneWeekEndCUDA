@@ -3,6 +3,9 @@
 #include <cstdint>
 #include <memory>
 
+#include "Camera.h"
+#include "Canvas.h"
+
 struct ImageData {
     ImageData()
         : data(nullptr) {}
@@ -18,9 +21,11 @@ struct ImageData {
 
 extern std::shared_ptr<ImageData> imageData;
 
+extern Camera* camera;
+extern Canvas* canvas;
+
 extern int32_t width;
 extern int32_t height;
-extern int32_t sampleCount;
 
 void initialize(int32_t width, int32_t height);
 void pathTracing();

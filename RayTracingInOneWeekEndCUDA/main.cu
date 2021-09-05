@@ -2,10 +2,9 @@
 #include "main.h"
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
+#include "device_atomic_functions.h"
 #include "Utils.h"
-#include "Canvas.h"
 #include "GPUTimer.h"
-#include "Camera.h"
 #include "Sphere.h"
 #include <cstdio>
 
@@ -156,7 +155,7 @@ CUDA_GLOBAL void renderInit(int32_t width, int32_t height, curandState* randStat
 //    }
 //}
 
-CUDA_GLOBAL void render(Canvas* canvas, Camera* camera, curandState* randStates, Sphere* spheres, int32_t sampleCount) {
+CUDA_GLOBAL void render(Canvas* canvas, Camera* camera, curandState* randStates, Sphere* spheres) {
     auto x = threadIdx.x + blockDim.x * blockIdx.x;
     auto y = threadIdx.y + blockDim.y * blockIdx.y;
     auto width = canvas->getWidth();
@@ -181,8 +180,8 @@ CUDA_GLOBAL void render(Canvas* canvas, Camera* camera, curandState* randStates,
         }
         // Very important!!!
         randStates[index] = localRandState;
-        canvas->writePixel(index, color / samplesPerPixel);
-        //canvas->accumulatePixel(index, color, sampleCount);
+        //canvas->writePixel(index, color / samplesPerPixel);
+        canvas->accumulatePixel(index, color);
     }
 }
 
@@ -198,11 +197,24 @@ CUDA_GLOBAL void createDieletricMaterial(Material** material, Float indexOfRefra
     (*material) = new Dieletric(indexOfRefraction);
 }
 
-#define RESOLUTION 2
+CUDA_GLOBAL void clearBackBuffers(Canvas* canvas) {
+    auto x = threadIdx.x + blockDim.x * blockIdx.x;
+    auto y = threadIdx.y + blockDim.y * blockIdx.y;
+    auto width = canvas->getWidth();
+    auto height = canvas->getHeight();
+
+    auto index = y * width + x;
+
+    if (index < (width * height)) {
+        canvas->clearPixel(index);
+    }
+}
+
+#define RESOLUTION 0
 
 #if RESOLUTION == 0
 int32_t width = 512;
-int32_t height = 384;
+int32_t height = 288;
 #elif RESOLUTION == 1
 int32_t width = 1024;
 int32_t height = 576;
@@ -212,6 +224,9 @@ int32_t height = 720;
 #elif RESOLUTION == 3
 int32_t width = 1920;
 int32_t height = 1080;
+#elif RESOLUTION == 4
+int32_t width = 64;
+int32_t height = 36;
 #endif
 
 int32_t sampleCount = 0;
@@ -229,9 +244,10 @@ dim3 gridSize((width + blockSize.x - 1) / blockSize.x,
 
 void initialize(int32_t width, int32_t height) {
     //Canvas canvas(width, height);
+    Utils::reportGPUUsageInfo();
     canvas = createObjectPtr<Canvas>();
     canvas->initialize(width, height);
-
+    Utils::reportGPUUsageInfo();
     //Camera camera(make_float3(-2.0f, 2.0f, 1.0f), make_float3(0.0f, 0.0f, -1.0f), make_float3(0.0f, 1.0f, 0.0f), Float(width) / height, 20.0f);
     camera = createObjectPtr<Camera>();
     camera->initialize(make_float3(-2.0f, 2.0f, 1.0f), make_float3(0.0f, 0.0f, -1.0f), make_float3(0.0f, 1.0f, 0.0f), Float(width) / height, 20.0f);
@@ -268,18 +284,25 @@ void initialize(int32_t width, int32_t height) {
     imageData->height = height;
     imageData->channels = 3;
     imageData->size = pixelCount * 3;
+}   
+
+void clearBackBuffers() {
+    clearBackBuffers<<<gridSize, blockSize>>>(canvas);
+    gpuErrorCheck(cudaDeviceSynchronize());
+    canvas->resetSampleCount();
 }
 
 void pathTracing() {
-    render<<<gridSize, blockSize>>>(canvas, camera, randStates, spheres, sampleCount);
+    if (camera->isDirty()) {
+        clearBackBuffers();
+        camera->resetDiryFlag();
+    }
+
+    canvas->incrementSampleCount();
+    render<<<gridSize, blockSize>>>(canvas, camera, randStates, spheres);
     gpuErrorCheck(cudaDeviceSynchronize());
 
-    sampleCount++;
     imageData->data = canvas->getPixelBuffer();
-
-    if (imageData->data == nullptr) {
-        imageData->data = canvas->getPixelBuffer();
-    }
 }
 
 void cleanup() {

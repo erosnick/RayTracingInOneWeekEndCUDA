@@ -41,8 +41,6 @@ Float2 lastMousePosition = { 0.0f, 0.0f };
 
 float rotateSpeed = 3.0f;
 
-GLuint pboIds[2];
-
 void APIENTRY glDebugOutput(GLenum source,
     GLenum type,
     GLuint id,
@@ -214,7 +212,7 @@ void buildImGuiWidgets() {
         ImGui::Text("counter = %d", counter);
 
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-        ImGui::Text("Sample Count: %d", sampleCount);
+        ImGui::Text("Sample Count: %d", canvas->getSampleCount());
 
         frameTime = 1.0f / ImGui::GetIO().Framerate;
 
@@ -282,56 +280,7 @@ void renderImGui() {
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
-void updateBuffer(GLuint textureId) {
-    static int index = 0;
-    int nextIndex = 0;                  // pbo index used for next frame
-
-    // In dual PBO mode, increment current index first then get the next index
-    index = (index + 1) % 2;
-    nextIndex = (index + 1) % 2;
-
-    // start to copy from PBO to texture object ///////
-    // bind the texture and PBO
-    glBindTexture(GL_TEXTURE_2D, textureId);
-    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pboIds[index]);
-
-    // copy pixels from PBO to texture object
-    // Use offset instead of ponter.
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, imageData->width, imageData->height, GL_RGB, GL_UNSIGNED_BYTE, 0);
-
-    // bind PBO to update pixel values
-    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pboIds[nextIndex]);
-
-    // map the buffer object into client's memory
-    // Note that glMapBuffer() causes sync issue.
-    // If GPU is working with this buffer, glMapBuffer() will wait(stall)
-    // for GPU to finish its job. To avoid waiting (stall), you can call
-    // first glBufferData() with NULL pointer before glMapBuffer().
-    // If you do that, the previous data in PBO will be discarded and
-    // glMapBuffer() returns a new allocated pointer immediately
-    // even if GPU is still working with the previous data.
-    glBufferData(GL_PIXEL_UNPACK_BUFFER, imageData->size, 0, GL_STREAM_DRAW);
-
-    uint8_t* data = (uint8_t*)glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
-
-    if (data) {
-        for (auto i = 0; i < imageData->height; i++) {
-            for (auto j = 0; j < imageData->width; j++) {
-                auto index = i * imageData->width + j;
-                data[index * 3] = imageData->data[index * 3];
-                data[index * 3 + 1] = imageData->data[index * 3 + 1];
-                data[index * 3 + 2] = imageData->data[index * 3 + 2];
-            }
-        }
-        glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);    // 不要忘了解除Map
-    }
-
-    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
-}
-
 void render(unsigned int textureId, Shader& ourShader, unsigned int VAO) {
-    //updateBuffer(textureId);
-
     // render
          // ------
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
@@ -508,20 +457,6 @@ int main() {
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
     glEnableVertexAttribArray(2);
 
-    // load and create a texture 
-    // -------------------------
-    unsigned int textureId;
-    // texture 1
-    // ---------
-    glGenTextures(1, &textureId);
-    glBindTexture(GL_TEXTURE_2D, textureId);
-    // set the texture wrapping parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	// set texture wrapping to GL_REPEAT (default wrapping method)
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    // set texture filtering parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
     // load image, create texture and generate mipmaps
     initialize(width, height);
 
@@ -534,18 +469,9 @@ int main() {
     // -------------------------------------------------------------------------------------------
     ourShader.use(); // don't forget to activate/use the shader before setting uniforms!
     // either set it manually like so:
-    glUniform1i(glGetUniformLocation(ourShader.ID, "result"), 0);
-
     auto projectionMatrix = glm::ortho(0.0f, static_cast<float>(width), 0.0f, static_cast<float>(height));
 
     ourShader.setMat4("projectionMatrix", projectionMatrix);
-    GLuint buffer;
-    glGenBuffers(2, pboIds);
-    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pboIds[0]);
-    glBufferData(GL_PIXEL_UNPACK_BUFFER, imageData->size, 0, GL_STREAM_DRAW);
-    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pboIds[1]);
-    glBufferData(GL_PIXEL_UNPACK_BUFFER, imageData->size, 0, GL_STREAM_DRAW);
-    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 
     // render loop
     // -----------
@@ -596,31 +522,31 @@ void processInput(GLFWwindow* window) {
         return;
     }
 
-    //if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-    //    payload->camera->strafe(-frameTime);
-    //}
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+        camera->strafe(-frameTime);
+    }
 
-    //if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-    //    payload->camera->strafe(frameTime);
-    //}
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+        camera->strafe(frameTime);
+    }
 
-    //if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-    //    payload->camera->walk(frameTime);
-    //}
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+        camera->walk(frameTime);
+    }
 
-    //if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-    //    payload->camera->walk(-frameTime);
-    //}
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+        camera->walk(-frameTime);
+    }
 
-    //if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
-    //    payload->camera->raise(frameTime);
-    //}
+    if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
+        camera->raise(frameTime);
+    }
 
-    //if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
-    //    payload->camera->raise(-frameTime);
-    //}
+    if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
+        camera->raise(-frameTime);
+    }
 
-    //payload->camera->updateViewMatrix();
+    camera->updateViewMatrix();
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
