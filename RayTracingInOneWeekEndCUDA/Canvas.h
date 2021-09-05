@@ -27,6 +27,9 @@ public:
     void initialize(int32_t inWidth, int32_t inHeight) {
         width = inWidth;
         height = inHeight;
+        sampleCount = 0;
+        renderingTime = 0.0f;
+
         auto size = static_cast<size_t>(width * height * 3);
 
         gpuErrorCheck(cudaMallocManaged(&pixelBuffer, sizeof(Buffer<uint8_t>*)));
@@ -163,8 +166,20 @@ public:
         sampleCount = 0;
     }
 
+    CUDA_HOST_DEVICE inline void resetRenderingTime() {
+        renderingTime = 0;
+    }
+
     CUDA_HOST_DEVICE inline uint32_t getSampleCount() const {
         return sampleCount;
+    }
+
+    CUDA_HOST_DEVICE inline Float getRenderingTime() {
+        return renderingTime;
+    }
+
+    CUDA_HOST_DEVICE inline void incrementRenderingTime() {
+        renderingTime += 16.0f;
     }
 
     CUDA_HOST_DEVICE inline void print() const {
@@ -180,6 +195,8 @@ private:
     int32_t width;
     int32_t height;
     uint32_t sampleCount;
+
+    Float renderingTime;
 };
 
 inline Canvas* createCanvas(int32_t width, int32_t height) {

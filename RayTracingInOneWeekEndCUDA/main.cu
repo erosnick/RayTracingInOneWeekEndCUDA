@@ -40,7 +40,7 @@ CUDA_GLOBAL void deleteDeviceObject(T** object) {
 }
 
 constexpr auto SPHERES = 5;
-CUDA_CONSTANT Sphere constantSpheres[SPHERES];
+//CUDA_CONSTANT Sphere constantSpheres[SPHERES];
 
 CUDA_DEVICE bool hit(const Ray& ray, Float tMin, Float tMax, HitResult& hitResult, Sphere* spheres) {
     HitResult tempHitResult;
@@ -180,7 +180,7 @@ CUDA_GLOBAL void render(Canvas* canvas, Camera* camera, curandState* randStates,
             auto dx = Float(x + rx) / (width - 1);
             auto dy = Float(y + ry) / (height - 1);
 
-            auto ray = camera->getRay(dx, dy);
+            auto ray = camera->getRay(dx, dy, &localRandState);
             color += rayColor(ray, &localRandState, spheres);
         }
         // Very important!!!
@@ -259,7 +259,21 @@ void initialize(int32_t width, int32_t height) {
     //Camera camera(make_float3(-2.0f, 2.0f, 1.0f), make_float3(0.0f, 0.0f, -1.0f), make_float3(0.0f, 1.0f, 0.0f), Float(width) / height, 20.0f);
     camera = createObjectPtr<Camera>();
     //camera->initialize(make_float3(-2.0f, 2.0f, 1.0f), make_float3(0.0f, 0.0f, -1.0f), make_float3(0.0f, 1.0f, 0.0f), Float(width) / height, 20.0f);
-    camera->initialize(make_float3(0.0f, 1.0f, 1.0f), make_float3(0.0f, 0.0f, -1.0f), make_float3(0.0f, 1.0f, 0.0f), Float(width) / height, 90.0f);
+    //camera->initialize(make_float3(0.0f, 1.0f, 1.0f), make_float3(0.0f, 0.0f, -1.0f), make_float3(0.0f, 1.0f, 0.0f), Float(width) / height, 90.0f);
+
+    //auto eye = make_float3(3.0f, 3.0f, 5.0f);
+    //auto center = make_float3(0.0f, 0.0f, -1.0f);
+    //auto up = make_float3(0.0f, 1.0f, 0.0f);
+    //auto focusDistance = length(center - eye);
+    //camera->initialize(eye, center, up, Float(width) / height, 20.0f, 2.0f, focusDistance);
+
+    // If the distance between object and camera equals to focus lens
+    // then the object is in focus
+    auto eye = position(3.0f, 3.0f, 5.0f);
+    auto center = position(0.0f, 0.0f, -1.0f);
+    auto up = position(0.0f, 1.0f, 0.0f);
+    auto focusDistance = length(center - eye);
+    camera->initialize(eye, center, up, Float(width) / height, 20.0f, 2.0f, focusDistance);
 
     spheres = createObjectArray<Sphere>(SPHERES);
 
@@ -267,6 +281,7 @@ void initialize(int32_t width, int32_t height) {
         material = createObjectPtr<Material*>();
     }
 
+    // Scene1 Defocus Blur
     createDieletricMaterial<<<1, 1>>>(materials[0], 1.5f);
     createDieletricMaterial<<<1, 1>>>(materials[1], 1.5f);
     createLambertianMaterial<<<1, 1>>>(materials[2], make_float3(0.1f, 0.2f, 0.5f));
@@ -300,6 +315,7 @@ void clearBackBuffers() {
     clearBackBuffers<<<gridSize, blockSize>>>(canvas);
     gpuErrorCheck(cudaDeviceSynchronize());
     canvas->resetSampleCount();
+    canvas->resetRenderingTime();
 }
 
 void pathTracing() {
@@ -309,6 +325,7 @@ void pathTracing() {
     }
 
     canvas->incrementSampleCount();
+    canvas->incrementRenderingTime();
     render<<<gridSize, blockSize>>>(canvas, camera, randStates, spheres);
     gpuErrorCheck(cudaDeviceSynchronize());
 

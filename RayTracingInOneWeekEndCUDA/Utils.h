@@ -14,11 +14,21 @@
 #define gpuErrorCheck(ans) { Utils::gpuAssert((ans), __FILE__, __LINE__); }
 
 namespace Utils {
-    inline float randomFloat(float start = 0.0f, float end = 1.0f) {
-        std::uniform_real_distribution<float> distribution(start, end);
-        static std::random_device randomDevice;
-        static std::mt19937 generator(randomDevice());
+    //inline float randomFloat(float start = 0.0f, float end = 1.0f) {
+    //    std::uniform_real_distribution<float> distribution(start, end);
+    //    static std::random_device randomDevice;
+    //    static std::mt19937 generator(randomDevice());
+    //    return distribution(generator);
+    //}
+
+    inline float randomFloat() {
+        static std::uniform_real_distribution<float> distribution(0.0f, 1.0f);
+        static std::mt19937 generator;
         return distribution(generator);
+    }
+
+    inline float randomFloat(Float min, Float max) {
+        return (min + (max - min) * randomFloat());
     }
 
     inline double randomDouble(double start = 0.0, double end = 1.0) {
@@ -32,6 +42,12 @@ namespace Utils {
     CUDA_DEVICE inline Float random(curandState* randState) {
         return curand_uniform(randState);
     }
+
+    // Random double in [min, max]
+    CUDA_DEVICE inline Float random(curandState* randState, Float min, Float max) {
+        return min + (max - min) * random(randState);
+    }
+
 
     // Random float3 in [0, 1]
     CUDA_DEVICE inline Float3 randomVector(curandState* randState) {
@@ -47,6 +63,7 @@ namespace Utils {
         return (min + (max - min) * randomVector(randState));
     }
 
+    // Random float3 in unit sphere
     CUDA_DEVICE inline Float3 randomInUnitSphere(curandState* randState) {
         while (true) {
             auto position = randomVector(randState, -1.0f, 1.0f);
@@ -58,10 +75,12 @@ namespace Utils {
         }
     }
 
+    // Random float3 in unit sphere surface
     CUDA_DEVICE inline Float3 randomUnitVector(curandState* randState) {
         return normalize(randomInUnitSphere(randState));
     }
 
+    // Random float3 in hemisphere
     CUDA_DEVICE inline Float3 randomHemiSphere(const Float3& normal, curandState* randState) {
         auto inUnitSphere = randomInUnitSphere(randState);
 
@@ -70,6 +89,16 @@ namespace Utils {
             return inUnitSphere;
         }
         return -inUnitSphere;
+    }
+
+    CUDA_DEVICE inline Float3 randomInUnitDisk(curandState* randState) {
+        while (true) {
+            auto position = make_float3(random(randState, -1.0f, 1.0f), random(randState, -1.0f, 1.0f), 0.0f);
+            if (lengthSquared(position) >= 1.0f) {
+                continue;
+            }
+            return position;
+        }
     }
 
     CUDA_DEVICE inline bool nearZero(const Float3& v) {
@@ -131,9 +160,14 @@ namespace Utils {
         std::cout << "每个SM的最大线程束数：" << devicePro.warpSize << std::endl;
     }
 }
-//
-//namespace Color {
-//    inline Vec3 random() {
-//        return Vec3(Utils::randomFloat(), Utils::randomFloat(), Utils::randomFloat());;
-//    }
-//}
+
+namespace Color {
+    inline Float3 random() {
+        return color(Utils::randomFloat(), Utils::randomFloat(), Utils::randomFloat());
+    }
+
+    inline Float3 random(Float min, Float max) {
+        auto randomColor = color(Utils::randomFloat(), Utils::randomFloat(), Utils::randomFloat());
+        return (min + (max - min) * randomColor);
+    }
+}

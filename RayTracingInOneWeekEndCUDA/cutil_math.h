@@ -24,6 +24,7 @@
 #define CUTIL_MATH_H
 
 #include "cuda_runtime.h"
+#include "vector_functions.h"
 
 using uint = unsigned int;
 using ushort = unsigned short;
@@ -1437,4 +1438,21 @@ inline __device__ __host__ float3 rotateX(float3 v, float radian) {
     return make_float3(v.x, v.y * cos(radian) - v.z * sin(radian),
                             v.y * sin(radian) + v.z * cos(radian));
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// Misc
+////////////////////////////////////////////////////////////////////////////////
+
+inline __device__ __host__ float3 color(float r, float g, float b) {
+    return make_float3(r, g, b);
+}
+
+inline __device__ __host__ float3 vector(float x, float y, float z) {
+    return make_float3(x, y, z);
+}
+
+inline __device__ __host__ float3 position(float x, float y, float z) {
+    return make_float3(x, y, z);
+}
+
 #endif

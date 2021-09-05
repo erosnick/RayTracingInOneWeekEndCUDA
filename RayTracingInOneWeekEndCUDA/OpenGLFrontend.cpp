@@ -26,20 +26,19 @@ void onFrameBufferResize(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
 
 // settings
-bool bShowDemoWindow = true;
-bool bShowAnotherWindow = true;
+bool bShowDemoWindow = false;
+bool bShowAnotherWindow = false;
 bool bShowOpenMenuItem = true;
 
 GLFWwindow* window = nullptr;
 
-float frameTime = 0.0f;
-
+Float frameTime = 0.0f;
 bool bRightMouseButtonDown = false;
 bool bMiddleMouseButtonDown = false;
 
 Float2 lastMousePosition = { 0.0f, 0.0f };
 
-float rotateSpeed = 1.0f;
+Float rotateSpeed = 1.0f;
 
 void APIENTRY glDebugOutput(GLenum source,
     GLenum type,
@@ -185,7 +184,9 @@ void buildImGuiWidgets() {
         //ImGui::PopFont();
         ImGui::Checkbox("Demo Window", &bShowDemoWindow);      // Edit bools storing our window open/close state
         ImGui::Checkbox("Another Window", &bShowAnotherWindow);
-
+  /*      if (ImGui::SliderFloat("Aperture", &camera->getAperture(), 0.0f, 2.0f)) {
+            camera->setDirty();
+        }*/
         //ImGui::ColorEdit3("Ambient", (float*)&commonMaterial->Ka); // Edit 1 float using a slider from 0.1f to 1.0f
         //ImGui::SliderFloat("Reflection", &commonMaterial->reflectionFactor, 0.0f, 1.0f);
         //ImGui::SliderFloat("Refraction", &commonMaterial->refractionFactor, 0.0f, 1.0f);
@@ -211,8 +212,12 @@ void buildImGuiWidgets() {
         ImGui::SameLine();
         ImGui::Text("counter = %d", counter);
 
+        auto frameTimeMS = 1000.0f / ImGui::GetIO().Framerate;
+
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
         ImGui::Text("Sample Count: %d", canvas->getSampleCount());
+
+        ImGui::Text("Rendering Time: %.3f ms", canvas->getRenderingTime());
 
         frameTime = 1.0f / ImGui::GetIO().Framerate;
 
@@ -546,7 +551,7 @@ void processInput(GLFWwindow* window) {
         camera->raise(-frameTime);
     }
 
-    camera->orbit(make_float3(0.0f, 0.0f, -1.0f));
+    //camera->orbit(make_float3(0.0f, 0.0f, -1.0f));
 
     camera->updateViewMatrix();
 }

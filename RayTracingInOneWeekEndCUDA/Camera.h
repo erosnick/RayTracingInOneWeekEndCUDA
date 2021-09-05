@@ -4,21 +4,24 @@
 
 #include "Ray.h"
 #include "Constants.h"
+#include "Utils.h"
 
 class Camera {
 public:
-    CUDA_HOST_DEVICE Camera(const Float3& inEye, const Float3& inCenter, const Float3& inUp, Float inAspectRatio, Float inFOV = 90.0f) {
-        initialize(inEye, inCenter, inUp, inAspectRatio, inFOV);
+    CUDA_HOST_DEVICE Camera(const Float3& inEye, const Float3& inCenter, const Float3& inUp, Float inAspectRatio, 
+                            Float inFOV = 90.0f, Float inAperture = 2.0f, Float inFocusDistance = 1.0f) {
+        initialize(inEye, inCenter, inUp, inAspectRatio, inFOV, inAperture, inFocusDistance);
     }
 
-    CUDA_HOST_DEVICE void initialize(const Float3& inEye, const Float3& inCenter, const Float3& inUp, Float inAspectRatio, Float inFOV = 90.0f) {
+    CUDA_HOST_DEVICE void initialize(const Float3& inEye, const Float3& inCenter, const Float3& inUp, Float inAspectRatio, 
+                                     Float inFOV = 90.0f, Float inAperture = 2.0f, Float inFocusDistance = 1.0f) {
         eye = inEye;
         center = inCenter;
         up = inUp;
         aspectRatio = inAspectRatio;
         fov = inFOV;
-
-        focalLength = 1.0f;
+        aperture = inAperture;
+        focusDistance = inFocusDistance;
         cameraSpeed = 6.0f;
 
         scale = tan(Math::radians(fov / 2.0f));
@@ -87,32 +90,71 @@ public:
             trueUp = cross(right, forward);
 
             origin = eye;
-            horizontal = viewportWidth * right;
-            vertical = viewportHeight * trueUp;
-            lowerLeftCorner = origin - horizontal / 2.0f - vertical / 2.0f + forward;
+            horizontal = viewportWidth * right * focusDistance;
+            vertical = viewportHeight * trueUp * focusDistance;
+            lowerLeftCorner = origin - horizontal / 2.0f - vertical / 2.0f + forward * focusDistance;
+
+            updateLensRadius();
         }
     }
 
-    bool isDirty() const {
+    CUDA_HOST_DEVICE inline void setAperture(Float inAperture) {
+        aperture = inAperture;
+        updateLensRadius();
+    }
+
+    CUDA_HOST_DEVICE inline void updateLensRadius() {
+        bIsDirty = true;
+        lensRadius = aperture / 2.0f;
+    }
+    
+    CUDA_HOST_DEVICE inline Float getAperture() const {
+        return aperture;
+    }
+
+    CUDA_HOST_DEVICE inline Float& getAperture() {
+        return aperture;
+    }
+
+    inline void setDirty() {
+        bIsDirty = true;
+    }
+
+    inline bool isDirty() const {
         return bIsDirty;
     }
 
-    void resetDiryFlag() {
+    inline void resetDiryFlag() {
         bIsDirty = false;
     }
 
-    CUDA_DEVICE inline Ray getRay(Float dx, Float dy) {
-        auto direction = lowerLeftCorner + dx * horizontal + dy * vertical - origin;
-        return Ray(origin, normalize(direction));
+    CUDA_DEVICE inline Ray getRay(Float dx, Float dy, curandState* randState) {
+        // Normally, all scene rays originate from the eye point.
+        // In order to accomplish defocus blur, generate random 
+        // scene rays originating from inside a disk centered at 
+        // the eye point.The larger the radius, the greater the 
+        // defocus blur.You can think of our original camera as 
+        // having a defocus disk of radius zero(no blur at all), 
+        // so all rays originated at the disk center(eye).
+        auto random = lensRadius * Utils::randomInUnitDisk(randState);
+
+        // Offset from lens center
+        auto offset = right * random.x + trueUp * random.y;
+
+        auto newOrigin = origin + offset;
+        auto direction = lowerLeftCorner + dx * horizontal + dy * vertical - newOrigin;
+        return Ray(origin + offset, normalize(direction));
     }
 private:
     Float aspectRatio;
-    Float focalLength = 1.0f;
     Float fov;
     Float scale = 1.0f;
     Float viewportHeight;
     Float viewportWidth;
     Float cameraSpeed = 6.0f;
+    Float aperture;
+    Float focusDistance;
+    Float lensRadius;
 
     Float3 eye;
     Float3 center;
