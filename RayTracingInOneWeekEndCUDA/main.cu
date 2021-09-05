@@ -160,7 +160,12 @@ CUDA_GLOBAL void render(Canvas* canvas, Camera* camera, curandState* randStates,
     auto y = threadIdx.y + blockDim.y * blockIdx.y;
     auto width = canvas->getWidth();
     auto height = canvas->getHeight();
+#ifdef GPU_REALTIME
     constexpr auto samplesPerPixel = 1;
+#else
+    constexpr auto samplesPerPixel = 100;
+#endif // GPU_REALTIME
+
     constexpr auto maxDepth = 5;
     auto index = y * width + x;
 
@@ -179,9 +184,12 @@ CUDA_GLOBAL void render(Canvas* canvas, Camera* camera, curandState* randStates,
             color += rayColor(ray, &localRandState, spheres);
         }
         // Very important!!!
-        randStates[index] = localRandState;
-        //canvas->writePixel(index, color / samplesPerPixel);
+        randStates[index] = localRandState; 
+#ifdef GPU_REALTIME
         canvas->accumulatePixel(index, color);
+#else
+        canvas->writePixel(index, color / samplesPerPixel);
+#endif // GPU_REALTIME
     }
 }
 
