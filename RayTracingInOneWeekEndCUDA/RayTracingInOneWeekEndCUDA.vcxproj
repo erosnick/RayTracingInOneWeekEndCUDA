@@ -45,7 +45,6 @@
     <ClInclude Include="main.h" />
     <ClInclude Include="Material.h" />
     <ClInclude Include="HitResult.h" />
-    <ClInclude Include="Memory.h" />
     <ClInclude Include="Processor.h" />
     <ClInclude Include="Ray.h" />
     <ClInclude Include="Shader.h" />

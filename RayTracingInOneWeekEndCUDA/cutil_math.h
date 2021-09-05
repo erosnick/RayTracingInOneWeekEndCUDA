@@ -1424,4 +1424,17 @@ inline __device__ __host__ float4 smoothstep(float4 a, float4 b, float4 x)
 	return (y*y*(make_float4(3.0f) - (make_float4(2.0f)*y)));
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// rotation
+////////////////////////////////////////////////////////////////////////////////
+
+inline __device__ __host__ float3 rotateY(float3 v, float radian) {
+    return make_float3(v.x * cos(radian) + v.z * sin(radian), v.y, 
+                      -v.x * sin(radian) + v.z * cos(radian));
+}
+
+inline __device__ __host__ float3 rotateX(float3 v, float radian) {
+    return make_float3(v.x, v.y * cos(radian) - v.z * sin(radian),
+                            v.y * sin(radian) + v.z * cos(radian));
+}
 #endif

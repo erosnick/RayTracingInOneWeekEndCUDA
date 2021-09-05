@@ -210,7 +210,7 @@ CUDA_GLOBAL void clearBackBuffers(Canvas* canvas) {
     }
 }
 
-#define RESOLUTION 0
+#define RESOLUTION 2
 
 #if RESOLUTION == 0
 int32_t width = 512;
@@ -250,7 +250,8 @@ void initialize(int32_t width, int32_t height) {
     Utils::reportGPUUsageInfo();
     //Camera camera(make_float3(-2.0f, 2.0f, 1.0f), make_float3(0.0f, 0.0f, -1.0f), make_float3(0.0f, 1.0f, 0.0f), Float(width) / height, 20.0f);
     camera = createObjectPtr<Camera>();
-    camera->initialize(make_float3(-2.0f, 2.0f, 1.0f), make_float3(0.0f, 0.0f, -1.0f), make_float3(0.0f, 1.0f, 0.0f), Float(width) / height, 20.0f);
+    //camera->initialize(make_float3(-2.0f, 2.0f, 1.0f), make_float3(0.0f, 0.0f, -1.0f), make_float3(0.0f, 1.0f, 0.0f), Float(width) / height, 20.0f);
+    camera->initialize(make_float3(0.0f, 1.0f, 1.0f), make_float3(0.0f, 0.0f, -1.0f), make_float3(0.0f, 1.0f, 0.0f), Float(width) / height, 90.0f);
 
     spheres = createObjectArray<Sphere>(SPHERES);
 
@@ -263,7 +264,8 @@ void initialize(int32_t width, int32_t height) {
     createLambertianMaterial<<<1, 1>>>(materials[2], make_float3(0.1f, 0.2f, 0.5f));
     //createDieletricMaterial<<<1, 1>>>(materials[3], 1.5f);
     createMetalMaterial<<<1, 1>>>(materials[3], make_float3(0.8f, 0.6f, 0.2f), 0.0f);
-    createLambertianMaterial<<<1, 1>>>(materials[4], make_float3(0.8f, 0.8f, 0.0f));
+    //createLambertianMaterial<<<1, 1>>>(materials[4], make_float3(0.8f, 0.8f, 0.0f));
+    createMetalMaterial<<<1, 1>>>(materials[4], make_float3(0.5f, 0.7f, 1.0f), 0.0f);
     gpuErrorCheck(cudaDeviceSynchronize());
 
     spheres[0] = { { -1.0f, 0.0f, -1.0f},   0.5f, *(materials[0]), true };

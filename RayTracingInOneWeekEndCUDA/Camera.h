@@ -52,16 +52,44 @@ public:
         bIsDirty = true;
     }
 
-    CUDA_HOST_DEVICE void updateViewMatrix() {
+    void yaw(Float delta) {
+        // Should rotate around up vector
+        forward = normalize(rotateY(forward, delta));
+        right = normalize(rotateY(right, delta));
+        //up = glm::cross(right, forward);
+
+        center = eye + forward;
+
+        bIsDirty = true;
+    }
+
+    void pitch(Float delta) {
+        // Should rotate around right vector
+        forward = normalize(rotateX(forward, delta));
+        //up = glm::normalize(rotation * up);
+        center = eye + forward;
+
+        bIsDirty = true;
+    }
+
+    CUDA_HOST_DEVICE inline void orbit(const Float3& target) {
+        auto x = eye.x;
+        auto z = eye.z;
+        eye.x = (x - target.x) * cos(0.01f) - (z - target.z) * sin(0.01f) + target.x;
+        eye.z = (x - target.x) * sin(0.01f) + (z - target.z) * cos(0.01f) + target.z;
+        bIsDirty = true;
+    }
+
+    CUDA_HOST_DEVICE inline void updateViewMatrix() {
         if (bIsDirty) {
-            forward = normalize(eye - center);
-            right = normalize(cross(up, forward));
-            up = cross(forward, right);
+            forward = normalize(center - eye);
+            right = normalize(cross(forward, up));
+            trueUp = cross(right, forward);
 
             origin = eye;
             horizontal = viewportWidth * right;
-            vertical = viewportHeight * up;
-            lowerLeftCorner = origin - horizontal / 2.0f - vertical / 2.0f - forward;
+            vertical = viewportHeight * trueUp;
+            lowerLeftCorner = origin - horizontal / 2.0f - vertical / 2.0f + forward;
         }
     }
 
@@ -91,6 +119,7 @@ private:
     Float3 forward;
     Float3 right;
     Float3 up;
+    Float3 trueUp;
     Float3 horizontal;
     Float3 vertical;
     Float3 origin;

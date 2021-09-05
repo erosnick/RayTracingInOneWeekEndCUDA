@@ -39,7 +39,7 @@ bool bMiddleMouseButtonDown = false;
 
 Float2 lastMousePosition = { 0.0f, 0.0f };
 
-float rotateSpeed = 3.0f;
+float rotateSpeed = 1.0f;
 
 void APIENTRY glDebugOutput(GLenum source,
     GLenum type,
@@ -333,22 +333,22 @@ void onScrollCallback(GLFWwindow* window, double xOffset, double yOffset) {
         return;
     }
 
-    //payload->camera->walk(static_cast<float>(yOffset / 8.0f));
+    camera->walk(static_cast<float>(yOffset / 8.0f));
 }
 
 void onMouseMoveCallback(GLFWwindow* window, double x, double y) {
     double dx = (lastMousePosition.x - x) * frameTime;
     double dy = (lastMousePosition.y - y) * frameTime;
 
-    //if (bRightMouseButtonDown) {
-    //    payload->camera->yaw(static_cast<float>(dx) * rotateSpeed);
-    //    payload->camera->pitch(static_cast<float>(dy) * rotateSpeed);
-    //}
+    if (bRightMouseButtonDown) {
+        camera->yaw(Math::radians(dx * rotateSpeed));
+        camera->pitch(Math::radians(dy * rotateSpeed));
+    }
 
-    //if (bMiddleMouseButtonDown) {
-    //    payload->camera->strafe(static_cast<float>(-dx / 2.0f));
-    //    payload->camera->raise(static_cast<float>(dy / 2.0f));
-    //}
+    if (bMiddleMouseButtonDown) {
+        camera->strafe(static_cast<float>(-dx / 4.0f));
+        camera->raise(static_cast<float>(dy / 4.0f));
+    }
 
     lastMousePosition.x = static_cast<float>(x);
     lastMousePosition.y = static_cast<float>(y);
@@ -545,6 +545,8 @@ void processInput(GLFWwindow* window) {
     if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
         camera->raise(-frameTime);
     }
+
+    camera->orbit(make_float3(0.0f, 0.0f, -1.0f));
 
     camera->updateViewMatrix();
 }
