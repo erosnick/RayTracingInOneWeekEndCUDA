@@ -19,7 +19,7 @@ public:
         //}
     }
 
-    CUDA_DEVICE inline CUDA_DEVICE bool hit(const Ray& ray, Float tMin, Float tMax, HitResult& hitResult) const {
+    CUDA_DEVICE inline bool hit(const Ray& ray, Float tMin, Float tMax, HitResult& hitResult) const {
         //auto oc = ray.origin - center;
         //auto a = dot(ray.direction, ray.direction);
         //auto b = 2.0f * dot(oc, ray.direction);
