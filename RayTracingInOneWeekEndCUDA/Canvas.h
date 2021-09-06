@@ -8,8 +8,8 @@
 #include <algorithm>
 #include <iostream>
 
-#include "stb_image.h"
-#include "stb_image_write.h"
+#include "imgui/stb_image.h"
+#include "imgui/stb_image_write.h"
 
 #include "Buffer.h"
 #include "Memory.h"
