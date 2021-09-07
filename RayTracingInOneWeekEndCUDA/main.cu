@@ -155,7 +155,7 @@ CUDA_GLOBAL void renderInit(int32_t width, int32_t height, curandState* randStat
 //    }
 //}
 
-CUDA_GLOBAL void render(Canvas* canvas, Camera* camera, curandState* randStates, Sphere* spheres) {
+CUDA_GLOBAL void renderKernel(Canvas* canvas, Camera* camera, curandState* randStates, Sphere* spheres, int32_t* counter) {
     auto x = threadIdx.x + blockDim.x * blockIdx.x;
     auto y = threadIdx.y + blockDim.y * blockIdx.y;
     auto width = canvas->getWidth();
@@ -189,6 +189,14 @@ CUDA_GLOBAL void render(Canvas* canvas, Camera* camera, curandState* randStates,
         canvas->accumulatePixel(index, color);
 #else
         canvas->writePixel(index, color / samplesPerPixel);
+
+        auto tenPercent = (width * height) / 10;
+
+        auto old = atomicAdd(counter, 1);
+
+        if (old % tenPercent == 0) {
+            printf("Progress: %.2f%%\n", Float(*counter + tenPercent) / (width * height) * 100);
+        }
 #endif // GPU_REALTIME
     }
 }
@@ -267,42 +275,45 @@ void initialize(int32_t width, int32_t height) {
     //auto focusDistance = length(center - eye);
     //camera->initialize(eye, center, up, Float(width) / height, 20.0f, 2.0f, focusDistance);
 
-    // If the distance between object and camera equals to focus lens
-    // then the object is in focus
-    //auto eye = position(3.0f, 3.0f, 5.0f);
-    //auto center = position(0.0f, 0.0f, -1.0f);
-    //auto up = position(0.0f, 1.0f, 0.0f);
-    //auto focusDistance = length(center - eye);
-    //camera->initialize(eye, center, up, Float(width) / height, 20.0f, 2.0f, focusDistance);
-
-    auto eye = position(13.0f, 2.0f, 3.0f);
-    auto center = position(0.0f, 0.0f, 0.0f);
-    auto up = position(0.0f, 1.0f, 0.0f);
-    auto focusDistance = 10.0f;
-    auto aperture = 0.0f;
-    camera->initialize(eye, center, up, Float(width) / height, 20.0f, aperture, focusDistance);
-
     spheres = createObjectArray<Sphere>(SPHERES);
 
     for (auto& material : materials) {
         material = createObjectPtr<Material*>();
     }
 
-    //// Scene1 Defocus Blur
-    //createDieletricMaterial<<<1, 1>>>(materials[0], 1.5f);
-    //createDieletricMaterial<<<1, 1>>>(materials[1], 1.5f);
-    //createLambertianMaterial<<<1, 1>>>(materials[2], make_float3(0.1f, 0.2f, 0.5f));
-    ////createDieletricMaterial<<<1, 1>>>(materials[3], 1.5f);
-    //createMetalMaterial<<<1, 1>>>(materials[3], make_float3(0.8f, 0.6f, 0.2f), 0.0f);
-    ////createLambertianMaterial<<<1, 1>>>(materials[4], make_float3(0.8f, 0.8f, 0.0f));
-    //createMetalMaterial<<<1, 1>>>(materials[4], make_float3(0.5f, 0.7f, 1.0f), 0.0f);
-    //gpuErrorCheck(cudaDeviceSynchronize());
+#if 0
+    // If the distance between object and camera equals to focus lens
+    // then the object is in focus
+    auto eye = position(-2.0f, 2.0f, 1.0f);
+    auto center = position(0.0f, 0.0f, -1.0f);
+    auto up = position(0.0f, 1.0f, 0.0f);
+    auto focusDistance = length(center - eye);
+    auto aperture = 0.0f;
+    camera->initialize(eye, center, up, Float(width) / height, 20.0f, aperture, focusDistance);
 
-    //spheres[0] = { { -1.0f, 0.0f, -1.0f},   0.5f, *(materials[0]), true };
-    //spheres[1] = { { -1.0f, 0.0f, -1.0f }, -0.4f, *(materials[1]), false };
-    //spheres[2] = { {  0.0f, 0.0f, -1.0f },  0.5f, *(materials[2]), true };
-    //spheres[3] = { {  1.0f, 0.0f, -1.0f },  0.5f, *(materials[3]), true };
-    //spheres[4] = { {  0.0f, -100.5f, -1.0f }, 100.0f, *(materials[4]), true };
+    // Scene1 Defocus Blur
+    createDieletricMaterial<<<1, 1>>>(materials[0], 1.5f);
+    createDieletricMaterial<<<1, 1>>>(materials[1], 1.5f);
+    createLambertianMaterial<<<1, 1>>>(materials[2], make_float3(0.1f, 0.2f, 0.5f));
+    //createDieletricMaterial<<<1, 1>>>(materials[3], 1.5f);
+    createMetalMaterial<<<1, 1 >>>(materials[3], make_float3(0.8f, 0.6f, 0.2f), 0.0f);
+    //createLambertianMaterial<<<1, 1>>>(materials[4], make_float3(0.8f, 0.8f, 0.0f));
+    //createMetalMaterial<<<1, 1>>>(materials[4], make_float3(0.5f, 0.7f, 1.0f), 0.0f);
+    createMetalMaterial<<<1, 1 >>>(materials[4], make_float3(0.8f, 0.8f, 0.0f), 0.0f);
+    gpuErrorCheck(cudaDeviceSynchronize());
+
+    spheres[0] = { { -1.0f, 0.0f, -1.0f},   0.5f, *(materials[0]), true };
+    spheres[1] = { { -1.0f, 0.0f, -1.0f }, -0.4f, *(materials[1]), false };
+    spheres[2] = { {  0.0f, 0.0f, -1.0f },  0.5f, *(materials[2]), true };
+    spheres[3] = { {  1.0f, 0.0f, -1.0f },  0.5f, *(materials[3]), true };
+    spheres[4] = { {  0.0f, -100.5f, -1.0f }, 100.0f, *(materials[4]), true };
+#else
+    auto eye = position(13.0f, 2.0f, 3.0f);
+    auto center = position(0.0f, 0.0f, 0.0f);
+    auto up = position(0.0f, 1.0f, 0.0f);
+    auto focusDistance = 10.0f;
+    auto aperture = 0.0f;
+    camera->initialize(eye, center, up, Float(width) / height, 20.0f, aperture, focusDistance);
 
     // Scene2 Final
     createLambertianMaterial<<<1, 1>>>(materials[484], color(0.5f, 0.5f, 0.5f));
@@ -351,6 +362,7 @@ void initialize(int32_t width, int32_t height) {
     spheres[485] = { {  0.0f,  1.0f, 0.0f }, 1.0f, *(materials[485]), true };
     spheres[486] = { { -4.0f,  1.0f, 0.0f }, 1.0f, *(materials[486]), true };
     spheres[487] = { {  4.0f,  1.0f, 0.0f }, 1.0f, *(materials[487]), true };
+#endif
 
     auto pixelCount = width * height;
     randStates = createObjectArray<curandState>(pixelCount);
@@ -374,6 +386,7 @@ void clearBackBuffers() {
 }
 
 void pathTracing() {
+#ifdef GPU_REALTIM
     if (camera->isDirty()) {
         clearBackBuffers();
         camera->resetDiryFlag();
@@ -381,10 +394,20 @@ void pathTracing() {
 
     canvas->incrementSampleCount();
     canvas->incrementRenderingTime();
-    render<<<gridSize, blockSize>>>(canvas, camera, randStates, spheres);
+    renderKernel<<<gridSize, blockSize>>>(canvas, camera, randStates, spheres, nullptr);
     gpuErrorCheck(cudaDeviceSynchronize());
 
     imageData->data = canvas->getPixelBuffer();
+#else
+    auto* counter = createObjectPtr<int32_t>();
+
+    canvas->incrementSampleCount();
+    canvas->incrementRenderingTime();
+    renderKernel<<<gridSize, blockSize>>>(canvas, camera, randStates, spheres, counter);
+    gpuErrorCheck(cudaDeviceSynchronize());
+
+    deleteObject(counter);
+#endif
 }
 
 void cleanup() {
