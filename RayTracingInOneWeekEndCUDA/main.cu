@@ -49,9 +49,6 @@ CUDA_DEVICE bool hit(const Ray& ray, Float tMin, Float tMax, HitResult& hitResul
     //for (auto& sphere : constantSpheres) {
     for (auto i = 0; i < SPHERES; i++){
         auto sphere = spheres[i];
-        if (!sphere.bShading) {
-            continue;
-        }
         if (sphere.hit(ray, tMin, closestSoFar, tempHitResult)) {
             bHitAnything = true;
             closestSoFar = tempHitResult.t;
@@ -284,7 +281,8 @@ void initialize(int32_t width, int32_t height) {
 #if 0
     // If the distance between object and camera equals to focus lens
     // then the object is in focus
-    auto eye = position(-2.0f, 2.0f, 1.0f);
+    //auto eye = position(-2.0f, 2.0f, 1.0f);
+    auto eye = make_float3(3.0f, 3.0f, 5.0f);
     auto center = position(0.0f, 0.0f, -1.0f);
     auto up = position(0.0f, 1.0f, 0.0f);
     auto focusDistance = length(center - eye);
@@ -303,7 +301,7 @@ void initialize(int32_t width, int32_t height) {
     gpuErrorCheck(cudaDeviceSynchronize());
 
     spheres[0] = { { -1.0f, 0.0f, -1.0f},   0.5f, *(materials[0]), true };
-    spheres[1] = { { -1.0f, 0.0f, -1.0f }, -0.4f, *(materials[1]), false };
+    spheres[1] = { { -1.0f, 0.0f, -1.0f }, -0.4f, *(materials[1]), true };
     spheres[2] = { {  0.0f, 0.0f, -1.0f },  0.5f, *(materials[2]), true };
     spheres[3] = { {  1.0f, 0.0f, -1.0f },  0.5f, *(materials[3]), true };
     spheres[4] = { {  0.0f, -100.5f, -1.0f }, 100.0f, *(materials[4]), true };
