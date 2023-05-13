@@ -39,16 +39,17 @@ CUDA_GLOBAL void deleteDeviceObject(T** object) {
     delete (*object);
 }
 
-constexpr auto SPHERES = 488;
-//CUDA_CONSTANT Sphere constantSpheres[SPHERES];
+constexpr auto BOUNCES = 4;
+constexpr auto SPHERES = 4;
+CUDA_CONSTANT Sphere constantSpheres[SPHERES];
 
 CUDA_DEVICE bool hit(const Ray& ray, Float tMin, Float tMax, HitResult& hitResult, Sphere* spheres) {
     HitResult tempHitResult;
     bool bHitAnything = false;
     Float closestSoFar = tMax;
-    //for (auto& sphere : constantSpheres) {
-    for (auto i = 0; i < SPHERES; i++){
-        auto sphere = spheres[i];
+    for (auto& sphere : constantSpheres) {
+    //for (auto i = 0; i < SPHERES; i++){
+        //auto sphere = spheres[i];
         if (sphere.hit(ray, tMin, closestSoFar, tempHitResult)) {
             bHitAnything = true;
             closestSoFar = tempHitResult.t;
@@ -62,7 +63,7 @@ CUDA_DEVICE bool hit(const Ray& ray, Float tMin, Float tMax, HitResult& hitResul
 CUDA_DEVICE Float3 rayColor(const Ray& ray, curandState* randState, Sphere* spheres) {
     Ray currentRay = ray;
     auto currentAttenuation = make_float3(1.0f, 1.0f, 1.0f);
-    for (auto i = 0; i < 50; i++) {
+    for (auto i = 0; i < BOUNCES; i++) {
         HitResult hitResult;
         // Smaller tMin will has a impact on performance
         if (hit(currentRay, Math::epsilon, Math::infinity, hitResult, spheres)) {
@@ -160,7 +161,7 @@ CUDA_GLOBAL void renderKernel(Canvas* canvas, Camera* camera, curandState* randS
 #ifdef GPU_REALTIME
     constexpr auto samplesPerPixel = 1;
 #else
-    constexpr auto samplesPerPixel = 100;
+    constexpr auto samplesPerPixel = 1024;
 #endif // GPU_REALTIME
 
     constexpr auto maxDepth = 5;
@@ -181,9 +182,9 @@ CUDA_GLOBAL void renderKernel(Canvas* canvas, Camera* camera, curandState* randS
             color += rayColor(ray, &localRandState, spheres);
         }
         // Very important!!!
-        randStates[index] = localRandState; 
+        randStates[index] = localRandState;
 #ifdef GPU_REALTIME
-        canvas->accumulatePixel(index, color);
+        canvas->accumulatePixel(index, color / samplesPerPixel);
 #else
         canvas->writePixel(index, color / samplesPerPixel);
 
@@ -223,11 +224,11 @@ CUDA_GLOBAL void clearBackBuffers(Canvas* canvas) {
     }
 }
 
-#define RESOLUTION 2
+#define RESOLUTION 0
 
 #if RESOLUTION == 0
 int32_t width = 512;
-int32_t height = 288;
+int32_t height = 512;
 #elif RESOLUTION == 1
 int32_t width = 1024;
 int32_t height = 576;
@@ -247,13 +248,15 @@ int32_t sampleCount = 0;
 Canvas* canvas = nullptr;
 Camera* camera = nullptr;
 Sphere* spheres = nullptr;
-Material** materials[SPHERES];
+Material** materials[8];
 curandState* randStates = nullptr;
 std::shared_ptr<ImageData> imageData = nullptr;
 
 dim3 blockSize(32, 32);
 dim3 gridSize((width + blockSize.x - 1) / blockSize.x,
               (height + blockSize.y - 1) / blockSize.y);
+
+#define SCENE 0
 
 void initialize(int32_t width, int32_t height) {
     //Canvas canvas(width, height);
@@ -278,7 +281,7 @@ void initialize(int32_t width, int32_t height) {
         material = createObjectPtr<Material*>();
     }
 
-#if 0
+#if SCENE == 0
     // If the distance between object and camera equals to focus lens
     // then the object is in focus
     //auto eye = position(-2.0f, 2.0f, 1.0f);
@@ -300,12 +303,44 @@ void initialize(int32_t width, int32_t height) {
     createMetalMaterial<<<1, 1 >>>(materials[4], make_float3(0.8f, 0.8f, 0.0f), 0.0f);
     gpuErrorCheck(cudaDeviceSynchronize());
 
+    //spheres[0] = { { -1.0f, 0.0f, -1.0f},   0.5f, *(materials[0]), true };
+    //spheres[1] = { { -1.0f, 0.0f, -1.0f }, -0.4f, *(materials[1]), true };
+    //spheres[2] = { {  0.0f, 0.0f, -1.0f },  0.5f, *(materials[2]), true };
+    //spheres[3] = { {  1.0f, 0.0f, -1.0f },  0.5f, *(materials[3]), true };
+    //spheres[4] = { {  0.0f, -100.5f, -1.0f }, 100.0f, *(materials[4]), true };
+
     spheres[0] = { { -1.0f, 0.0f, -1.0f},   0.5f, *(materials[0]), true };
-    spheres[1] = { { -1.0f, 0.0f, -1.0f }, -0.4f, *(materials[1]), true };
-    spheres[2] = { {  0.0f, 0.0f, -1.0f },  0.5f, *(materials[2]), true };
-    spheres[3] = { {  1.0f, 0.0f, -1.0f },  0.5f, *(materials[3]), true };
-    spheres[4] = { {  0.0f, -100.5f, -1.0f }, 100.0f, *(materials[4]), true };
-#else
+    spheres[1] = { {  0.0f, 0.0f, -1.0f },  0.5f, *(materials[2]), true };
+    spheres[2] = { {  1.0f, 0.0f, -1.0f },  0.5f, *(materials[3]), true };
+    spheres[3] = { {  0.0f, -100.5f, -1.0f }, 100.0f, *(materials[4]), true };
+
+    gpuErrorCheck(cudaMemcpyToSymbol(constantSpheres, spheres, sizeof(Sphere) * SPHERES));
+
+#elif SCENE == 1
+    // If the distance between object and camera equals to focus lens
+// then the object is in focus
+//auto eye = position(-2.0f, 2.0f, 1.0f);
+    auto eye = make_float3(0.0f, 0.0f, 1.5f);
+    auto center = position(0.0f, 0.0f, -1.0f);
+    auto up = position(0.0f, 1.0f, 0.0f);
+    auto focusDistance = length(center - eye);
+    auto aperture = 0.0f;
+    camera->initialize(eye, center, up, Float(width) / height, 45.0F, aperture, focusDistance);
+
+    // Scene1 Defocus Blur
+    createLambertianMaterial<<<1, 1>>>(materials[0], make_float3(0.0f, 1.0f, 0.0f));
+    createLambertianMaterial<<<1, 1>>>(materials[1], make_float3(1.0f, 0.0f, 0.0f));
+    createLambertianMaterial<<<1, 1>>>(materials[2], make_float3(1.0f, 1.0f, 1.0f));
+    gpuErrorCheck(cudaDeviceSynchronize());
+
+    spheres[0] = { {  1000.5f, 0.0f, 0.0f}, 1000.0f, *(materials[0]), true };
+    spheres[1] = { { -1000.5f, 0.0f, 0.0f }, 1000.0f, *(materials[1]), true };
+    spheres[2] = { {  0.0f, -1000.5f, 0.0f },  1000.0f, *(materials[2]), true };
+    spheres[3] = { {  0.0f, 1000.5f, 0.0f },  1000.0f, *(materials[2]), true };
+    spheres[4] = { {  0.0f, 0.0f, -1000.5f }, 1000.0f, *(materials[2]), true };
+
+    gpuErrorCheck(cudaMemcpyToSymbol(constantSpheres, spheres, sizeof(Sphere) * SPHERES));
+#elif SCENE == 2
     auto eye = position(13.0f, 2.0f, 3.0f);
     auto center = position(0.0f, 0.0f, 0.0f);
     auto up = position(0.0f, 1.0f, 0.0f);
@@ -384,7 +419,7 @@ void clearBackBuffers() {
 }
 
 void pathTracing() {
-#ifdef GPU_REALTIM
+#ifdef GPU_REALTIME
     if (camera->isDirty()) {
         clearBackBuffers();
         camera->resetDiryFlag();
@@ -429,8 +464,6 @@ int main() {
     //gpuErrorCheck(cudaDeviceSetLimit(cudaLimitStackSize, 8192));
 
     initialize(width, height);
-
-    //gpuErrorCheck(cudaMemcpyToSymbol(constantSpheres, spheres, sizeof(Sphere) * SPHERES));
     
     GPUTimer timer("Rendering start...");
     pathTracing();
