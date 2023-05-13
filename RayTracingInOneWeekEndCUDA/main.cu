@@ -186,7 +186,7 @@ CUDA_GLOBAL void render(Canvas* canvas, Camera* camera, curandState* randStates,
         // Very important!!!
         randStates[index] = localRandState; 
 #ifdef GPU_REALTIME
-        canvas->accumulatePixel(index, color);
+        canvas->accumulatePixel(index, color / samplesPerPixel);
 #else
         canvas->writePixel(index, color / samplesPerPixel);
 #endif // GPU_REALTIME
@@ -236,8 +236,6 @@ int32_t height = 1080;
 int32_t width = 64;
 int32_t height = 36;
 #endif
-
-int32_t sampleCount = 0;
 
 Canvas* canvas = nullptr;
 Camera* camera = nullptr;
@@ -369,7 +367,7 @@ void initialize(int32_t width, int32_t height) {
 void clearBackBuffers() {
     clearBackBuffers<<<gridSize, blockSize>>>(canvas);
     gpuErrorCheck(cudaDeviceSynchronize());
-    canvas->resetSampleCount();
+    canvas->resetFrameCount();
     canvas->resetRenderingTime();
 }
 
@@ -379,7 +377,7 @@ void pathTracing() {
         camera->resetDiryFlag();
     }
 
-    canvas->incrementSampleCount();
+    canvas->incrementFrameCount();
     canvas->incrementRenderingTime();
     render<<<gridSize, blockSize>>>(canvas, camera, randStates, spheres);
     gpuErrorCheck(cudaDeviceSynchronize());

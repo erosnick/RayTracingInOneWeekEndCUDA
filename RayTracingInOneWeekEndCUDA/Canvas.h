@@ -27,7 +27,7 @@ public:
     void initialize(int32_t inWidth, int32_t inHeight) {
         width = inWidth;
         height = inHeight;
-        sampleCount = 0;
+        frameCount = 0;
         renderingTime = 0.0f;
 
         auto size = static_cast<size_t>(width * height * 3);
@@ -91,9 +91,9 @@ public:
         (*accumulationBuffer)[index * 3] += r;
         (*accumulationBuffer)[index * 3 + 1] += g;
         (*accumulationBuffer)[index * 3 + 2] += b;
-        (*pixelBuffer)[index * 3] = (*accumulationBuffer)[index * 3] / sampleCount;
-        (*pixelBuffer)[index * 3 + 1] = (*accumulationBuffer)[index * 3 + 1] / sampleCount;
-        (*pixelBuffer)[index * 3 + 2] = (*accumulationBuffer)[index * 3 + 2] / sampleCount;
+        (*pixelBuffer)[index * 3] = (*accumulationBuffer)[index * 3] / frameCount;
+        (*pixelBuffer)[index * 3 + 1] = (*accumulationBuffer)[index * 3 + 1] / frameCount;
+        (*pixelBuffer)[index * 3 + 2] = (*accumulationBuffer)[index * 3 + 2] / frameCount;
     }
 
     //inline Tuple pixelAt(int32_t x, int32_t y) {
@@ -158,20 +158,20 @@ public:
         (*accumulationBuffer)[index * 3+ 2] = 0;
     }
 
-    CUDA_HOST_DEVICE inline void incrementSampleCount() {
-        sampleCount++;
+    CUDA_HOST_DEVICE inline void incrementFrameCount() {
+        frameCount++;
     }
 
-    CUDA_HOST_DEVICE inline void resetSampleCount() {
-        sampleCount = 0;
+    CUDA_HOST_DEVICE inline void resetFrameCount() {
+        frameCount = 0;
     }
 
     CUDA_HOST_DEVICE inline void resetRenderingTime() {
         renderingTime = 0;
     }
 
-    CUDA_HOST_DEVICE inline uint32_t getSampleCount() const {
-        return sampleCount;
+    CUDA_HOST_DEVICE inline uint32_t getFrameCount() const {
+        return frameCount;
     }
 
     CUDA_HOST_DEVICE inline Float getRenderingTime() {
@@ -194,7 +194,7 @@ private:
 
     int32_t width;
     int32_t height;
-    uint32_t sampleCount;
+    uint32_t frameCount;
 
     Float renderingTime;
 };

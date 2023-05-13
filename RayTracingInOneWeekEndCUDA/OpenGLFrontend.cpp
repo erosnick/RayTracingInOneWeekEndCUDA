@@ -215,7 +215,7 @@ void buildImGuiWidgets() {
         auto frameTimeMS = 1000.0f / ImGui::GetIO().Framerate;
 
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-        ImGui::Text("Sample Count: %d", canvas->getSampleCount());
+        ImGui::Text("Sample Count: %d", canvas->getFrameCount());
 
         ImGui::Text("Rendering Time: %.3f ms", canvas->getRenderingTime());
 
