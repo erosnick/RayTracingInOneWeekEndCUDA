@@ -256,7 +256,7 @@ dim3 blockSize(32, 32);
 dim3 gridSize((width + blockSize.x - 1) / blockSize.x,
               (height + blockSize.y - 1) / blockSize.y);
 
-#define SCENE 0
+#define SCENE 2
 
 void initialize(int32_t width, int32_t height) {
     //Canvas canvas(width, height);
