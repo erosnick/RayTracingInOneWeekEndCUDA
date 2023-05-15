@@ -286,69 +286,69 @@ void initialize(int32_t width, int32_t height) {
         material = createObjectPtr<Material*>();
     }
 
-    //// Scene1 Defocus Blur
-    //createDieletricMaterial<<<1, 1>>>(materials[0], 1.5f);
-    //createDieletricMaterial<<<1, 1>>>(materials[1], 1.5f);
-    //createLambertianMaterial<<<1, 1>>>(materials[2], make_float3(0.1f, 0.2f, 0.5f));
-    ////createDieletricMaterial<<<1, 1>>>(materials[3], 1.5f);
-    //createMetalMaterial<<<1, 1>>>(materials[3], make_float3(0.8f, 0.6f, 0.2f), 0.0f);
-    ////createLambertianMaterial<<<1, 1>>>(materials[4], make_float3(0.8f, 0.8f, 0.0f));
-    //createMetalMaterial<<<1, 1>>>(materials[4], make_float3(0.5f, 0.7f, 1.0f), 0.0f);
-    //gpuErrorCheck(cudaDeviceSynchronize());
-
-    //spheres[0] = { { -1.0f, 0.0f, -1.0f},   0.5f, *(materials[0]), true };
-    //spheres[1] = { { -1.0f, 0.0f, -1.0f }, -0.4f, *(materials[1]), false };
-    //spheres[2] = { {  0.0f, 0.0f, -1.0f },  0.5f, *(materials[2]), true };
-    //spheres[3] = { {  1.0f, 0.0f, -1.0f },  0.5f, *(materials[3]), true };
-    //spheres[4] = { {  0.0f, -100.5f, -1.0f }, 100.0f, *(materials[4]), true };
-
-    // Scene2 Final
-    createLambertianMaterial<<<1, 1>>>(materials[484], color(0.5f, 0.5f, 0.5f));
-    createDieletricMaterial<<<1, 1>>>(materials[485], 1.5f);
-    createLambertianMaterial<<<1, 1>>>(materials[486], color(0.4f, 0.2f, 0.1f), 1.0f);
-    createMetalMaterial<<<1, 1>>>(materials[487], color(0.7f, 0.6f, 0.5f), 0.0f);
+    // Scene1 Defocus Blur
+    createDieletricMaterial<<<1, 1>>>(materials[0], 1.5f);
+    createDieletricMaterial<<<1, 1>>>(materials[1], 1.5f);
+    createLambertianMaterial<<<1, 1>>>(materials[2], make_float3(0.1f, 0.2f, 0.5f));
+    //createDieletricMaterial<<<1, 1>>>(materials[3], 1.5f);
+    createMetalMaterial<<<1, 1>>>(materials[3], make_float3(0.8f, 0.6f, 0.2f), 0.0f);
+    //createLambertianMaterial<<<1, 1>>>(materials[4], make_float3(0.8f, 0.8f, 0.0f));
+    createMetalMaterial<<<1, 1>>>(materials[4], make_float3(0.5f, 0.7f, 1.0f), 0.0f);
     gpuErrorCheck(cudaDeviceSynchronize());
 
-    for (auto a = -11; a < 11; a++) {
-        for (auto b = -11; b < 11; b++) {
-            auto index = (a + 11) * 22 + (b + 11);
-            auto chooseMaterial = Utils::randomFloat();
+    spheres[0] = { { -1.0f, 0.0f, -1.0f},   0.5f, *(materials[0]), true };
+    spheres[1] = { { -1.0f, 0.0f, -1.0f }, -0.4f, *(materials[1]), false };
+    spheres[2] = { {  0.0f, 0.0f, -1.0f },  0.5f, *(materials[2]), true };
+    spheres[3] = { {  1.0f, 0.0f, -1.0f },  0.5f, *(materials[3]), true };
+    spheres[4] = { {  0.0f, -100.5f, -1.0f }, 100.0f, *(materials[4]), true };
 
-            auto center = position(a + 0.9f * Utils::randomFloat(), 0.2f, b + 0.9f * Utils::randomFloat());
+    //// Scene2 Final
+    //createLambertianMaterial<<<1, 1>>>(materials[484], color(0.5f, 0.5f, 0.5f));
+    //createDieletricMaterial<<<1, 1>>>(materials[485], 1.5f);
+    //createLambertianMaterial<<<1, 1>>>(materials[486], color(0.4f, 0.2f, 0.1f), 1.0f);
+    //createMetalMaterial<<<1, 1>>>(materials[487], color(0.7f, 0.6f, 0.5f), 0.0f);
+    //gpuErrorCheck(cudaDeviceSynchronize());
 
-            if (length(center - position(4.0f, 0.2f, 0.0f)) > 0.9f) {
-                if (chooseMaterial < 0.8f) {
-                    // Diffuse
-                    auto albedo = Color::random() * Color::random();
-                    createLambertianMaterial<<<1, 1>>>(materials[index], albedo);
-                    gpuErrorCheck(cudaDeviceSynchronize());
+    //for (auto a = -11; a < 11; a++) {
+    //    for (auto b = -11; b < 11; b++) {
+    //        auto index = (a + 11) * 22 + (b + 11);
+    //        auto chooseMaterial = Utils::randomFloat();
 
-                    spheres[index] = { { center }, 0.2f, *(materials[index]), true };
-                }
-                else if (chooseMaterial < 0.95f) {
-                    // Metal
-                    auto albedo = Color::random(0.5f, 1.0f);
-                    auto fuzz = Utils::randomFloat(0.0f, 0.5f);
-                    createMetalMaterial<<<1, 1>>>(materials[index], albedo, fuzz);
-                    gpuErrorCheck(cudaDeviceSynchronize());
+    //        auto center = position(a + 0.9f * Utils::randomFloat(), 0.2f, b + 0.9f * Utils::randomFloat());
 
-                    spheres[index] = { { center }, 0.2f, *(materials[index]), true };
-                }
-                else {
-                    // Glass
-                    createDieletricMaterial<<<1, 1>>>(materials[index], 1.5f);
-                    gpuErrorCheck(cudaDeviceSynchronize());
+    //        if (length(center - position(4.0f, 0.2f, 0.0f)) > 0.9f) {
+    //            if (chooseMaterial < 0.8f) {
+    //                // Diffuse
+    //                auto albedo = Color::random() * Color::random();
+    //                createLambertianMaterial<<<1, 1>>>(materials[index], albedo);
+    //                gpuErrorCheck(cudaDeviceSynchronize());
 
-                    spheres[index] = { { center }, 0.2f, *(materials[index]), true };
-                }
-            }
-        }
-    }
+    //                spheres[index] = { { center }, 0.2f, *(materials[index]), true };
+    //            }
+    //            else if (chooseMaterial < 0.95f) {
+    //                // Metal
+    //                auto albedo = Color::random(0.5f, 1.0f);
+    //                auto fuzz = Utils::randomFloat(0.0f, 0.5f);
+    //                createMetalMaterial<<<1, 1>>>(materials[index], albedo, fuzz);
+    //                gpuErrorCheck(cudaDeviceSynchronize());
 
-    spheres[484] = { {  0.0f, -1000.0, 0.0f }, 1000.0f, *(materials[484]), true };
-    spheres[485] = { {  0.0f,  1.0f, 0.0f }, 1.0f, *(materials[485]), true };
-    spheres[486] = { { -4.0f,  1.0f, 0.0f }, 1.0f, *(materials[486]), true };
-    spheres[487] = { {  4.0f,  1.0f, 0.0f }, 1.0f, *(materials[487]), true };
+    //                spheres[index] = { { center }, 0.2f, *(materials[index]), true };
+    //            }
+    //            else {
+    //                // Glass
+    //                createDieletricMaterial<<<1, 1>>>(materials[index], 1.5f);
+    //                gpuErrorCheck(cudaDeviceSynchronize());
+
+    //                spheres[index] = { { center }, 0.2f, *(materials[index]), true };
+    //            }
+    //        }
+    //    }
+    //}
+
+    //spheres[484] = { {  0.0f, -1000.0, 0.0f }, 1000.0f, *(materials[484]), true };
+    //spheres[485] = { {  0.0f,  1.0f, 0.0f }, 1.0f, *(materials[485]), true };
+    //spheres[486] = { { -4.0f,  1.0f, 0.0f }, 1.0f, *(materials[486]), true };
+    //spheres[487] = { {  4.0f,  1.0f, 0.0f }, 1.0f, *(materials[487]), true };
 
     auto pixelCount = width * height;
     randStates = createObjectArray<curandState>(pixelCount);
